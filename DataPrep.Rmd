@@ -1,0 +1,94 @@
+---
+title: "Credit Default Prediction"
+author: "Sri Seshadri"
+date: "9/28/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+## Data
+
+```{r}
+library(tidyverse)
+library(caret)
+library(magrittr)
+library(pander)
+
+creditdata <- readRDS("credit_card_default.RData")
+
+creditdata <- as.data.frame(creditdata) %>% as_tibble()
+# Get stats on the data
+skimr::skim_with(numeric = list(hist = NULL),integer = list(hist = NULL))
+skimr::skim(creditdata) %>% pander()
+
+```
+
+```{r}
+# Bill amount -ve ? 
+creditdata %>% 
+  select(matches("BILL_|PAY_|DEF")) %>% 
+  #filter(BILL_AMT1 < 0 ) %>% 
+  filter_at(vars(matches('PAY_[0-9]')),all_vars(.==0))
+
+```
+
+
+```{r}
+creditdata %<>% 
+  mutate(PAY_RATIO2 = ifelse(PAY_AMT1==0 & BILL_AMT2==0|BILL_AMT2 <= 0,1,PAY_AMT1/BILL_AMT2),
+         PAY_RATIO3 = ifelse(PAY_AMT2==0 & BILL_AMT3== 0|BILL_AMT3 <= 0,1,PAY_AMT2/BILL_AMT3),
+         PAY_RATIO4 = ifelse(PAY_AMT3==0 & BILL_AMT4==0|BILL_AMT4 <= 0,1,PAY_AMT3/BILL_AMT4),
+         PAY_RATIO5 = ifelse(PAY_AMT4==0 & BILL_AMT5==0|BILL_AMT5 <= 0,1,PAY_AMT4/BILL_AMT5),
+         PAY_RATIO6 = ifelse(PAY_AMT5==0 & BILL_AMT6==0|BILL_AMT6 <= 0,1,PAY_AMT5/BILL_AMT6)) %>% 
+  mutate(PAY_RATIOAvg = rowMeans(select(.,starts_with("PAY_RATIO"))))
+
+
+```
+
+
+```{r}
+library(matrixStats)
+creditdata %<>% 
+  mutate(UTIL_1 = ifelse(BILL_AMT1/LIMIT_BAL < 0 , 0 , BILL_AMT1/LIMIT_BAL),
+         UTIL_2 = ifelse(BILL_AMT2/LIMIT_BAL < 0 , 0 , BILL_AMT2/LIMIT_BAL),
+         UTIL_3 = ifelse(BILL_AMT3/LIMIT_BAL < 0 , 0 , BILL_AMT3/LIMIT_BAL),
+         UTIL_4 = ifelse(BILL_AMT4/LIMIT_BAL < 0 , 0 , BILL_AMT4/LIMIT_BAL),
+         UTIL_5 = ifelse(BILL_AMT5/LIMIT_BAL < 0 , 0 , BILL_AMT5/LIMIT_BAL),
+         UTIL_6 = ifelse(BILL_AMT6/LIMIT_BAL < 0 , 0 , BILL_AMT6/LIMIT_BAL))
+```
+
+```{r}
+creditdata %>% select(starts_with("UTIL")) %>% skimr::skim()
+```
+
+```{r}
+creditdata %<>% 
+  mutate(UTIL_Avg = rowMeans(select(.,starts_with("UTIL"))),
+         UTILMR5 = UTIL_6 - UTIL_5,
+         UTILMR4 = UTIL_5 - UTIL_4,
+         UTILMR3 = UTIL_4 - UTIL_3,
+         UTILMR2 = UTIL_3 - UTIL_2,
+         UTILMR1 = UTIL_2 - UTIL_1,
+         AvgBILL = rowMeans(select(.,starts_with("BILL_AMT"))),
+         stdBILL = rowSds(select(.,starts_with("BILL_AMT")) %>% as.matrix())) %>% 
+  mutate(ppk = (LIMIT_BAL - AvgBILL)/(3*stdBILL))
+
+# Customers with increasing utilization over time
+creditdata %>% filter_at(vars(starts_with("UTILM")),all_vars(. > 0)) %>% select(ID) ->IDs
+
+creditdata %<>% 
+  mutate(utilFlag = ifelse(ID %in% IDs$ID,1,0))
+
+# Customers delinquent often
+creditdata %<>%
+  mutate(Max_Dlq = ifelse(rowMaxs(select(.,matches("PAY_[0-9]")) %>% as.matrix()) < 0,0,rowMaxs(select(.,matches("PAY_[0-9]")) %>% as.matrix()) ))
+
+
+  
+```
+
