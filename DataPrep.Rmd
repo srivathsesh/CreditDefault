@@ -97,7 +97,12 @@ creditdata %<>%
 creditdata %<>% 
   mutate(balFalg = ifelse(ID %in% BalIDs$ID,1,0))
 
+## Get percentage increase between month 6 and month 1
 
+creditdata %<>%
+  mutate(PerBALinc = (BILL_AMT6 - BILL_AMT1)/BILL_AMT6,
+         PerUTILinc = (UTIL_6 - UTIL_1)/UTIL_6,
+         PerUTILinc2 = (BILL_AMT6 - BILL_AMT1)/LIMIT_BAL)
 
 # Customers delinquent often
 creditdata %<>%
