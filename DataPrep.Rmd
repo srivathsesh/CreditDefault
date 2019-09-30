@@ -45,7 +45,8 @@ creditdata %<>%
          PAY_RATIO4 = ifelse(PAY_AMT3==0 & BILL_AMT4==0|BILL_AMT4 <= 0,1,PAY_AMT3/BILL_AMT4),
          PAY_RATIO5 = ifelse(PAY_AMT4==0 & BILL_AMT5==0|BILL_AMT5 <= 0,1,PAY_AMT4/BILL_AMT5),
          PAY_RATIO6 = ifelse(PAY_AMT5==0 & BILL_AMT6==0|BILL_AMT6 <= 0,1,PAY_AMT5/BILL_AMT6)) %>% 
-  mutate(PAY_RATIOAvg = rowMeans(select(.,starts_with("PAY_RATIO"))))
+  mutate(PAY_RATIOAvg = rowMeans(select(.,starts_with("PAY_RATIO"))),
+         PAY_RATIOAvg2 = ifelse(rowSums(select(.,matches("BILL_AMT[2-6]")))==0,1,rowSums(select(.,matches("PAY_AMT[1-5]")))/rowSums(select(.,matches("BILL_AMT[2-6]")))))
 
 
 ```
