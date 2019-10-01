@@ -124,4 +124,23 @@ creditdata %<>%
 
   
 ```
+## Feature Selection
+
+```{r}
+creditdata %>% 
+  filter(train == 1) %>% 
+  select(-train,-test,-validate,-u,-data.group,-ID) -> trainData
+
+ctrl <- trainControl(method = "cv",
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+x = trainData %>% select(-DEFAULT) %>% as.matrix()
+y = as.logical(trainData$DEFAULT)
+rpartFit <- train(x = as.matrix(x), 
+                  y = y,
+                  method = "rpart",
+                  tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl)
+```
 
