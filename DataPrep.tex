@@ -1,0 +1,521 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={Credit Default Prediction},
+            pdfauthor={Sri Seshadri},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{Credit Default Prediction}
+    \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+    \author{Sri Seshadri}
+    \preauthor{\centering\large\emph}
+  \postauthor{\par}
+      \predate{\centering\large\emph}
+  \postdate{\par}
+    \date{9/28/2019}
+
+
+\begin{document}
+\maketitle
+
+\hypertarget{introduction}{%
+\section{1. Introduction}\label{introduction}}
+
+\hypertarget{executive-summary}{%
+\section{2. Executive Summary}\label{executive-summary}}
+
+\hypertarget{data}{%
+\section{3. Data}\label{data}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(tidyverse)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## -- Attaching packages ----------------------------------------------------------------------------------------------------------------------------- tidyverse 1.2.1 --
+\end{verbatim}
+
+\begin{verbatim}
+## v ggplot2 3.2.0     v purrr   0.3.2
+## v tibble  2.1.3     v dplyr   0.8.3
+## v tidyr   0.8.3     v stringr 1.4.0
+## v readr   1.3.1     v forcats 0.4.0
+\end{verbatim}
+
+\begin{verbatim}
+## -- Conflicts -------------------------------------------------------------------------------------------------------------------------------- tidyverse_conflicts() --
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(caret)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Loading required package: lattice
+\end{verbatim}
+
+\begin{verbatim}
+## 
+## Attaching package: 'caret'
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:purrr':
+## 
+##     lift
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(magrittr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Attaching package: 'magrittr'
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:purrr':
+## 
+##     set_names
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:tidyr':
+## 
+##     extract
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(pander)}
+
+\NormalTok{creditdata <-}\StringTok{ }\KeywordTok{readRDS}\NormalTok{(}\StringTok{"credit_card_default.RData"}\NormalTok{)}
+
+\NormalTok{creditdata <-}\StringTok{ }\KeywordTok{as.data.frame}\NormalTok{(creditdata) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{as_tibble}\NormalTok{()}
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate_at}\NormalTok{(}\KeywordTok{c}\NormalTok{(}\StringTok{"DEFAULT"}\NormalTok{,}\StringTok{"EDUCATION"}\NormalTok{,}\StringTok{"MARRIAGE"}\NormalTok{,}\StringTok{"SEX"}\NormalTok{),}\DataTypeTok{.funs =}\NormalTok{ as.factor)}
+\CommentTok{# Get stats on the data}
+\NormalTok{skimr}\OperatorTok{::}\KeywordTok{skim_with}\NormalTok{(}\DataTypeTok{numeric =} \KeywordTok{list}\NormalTok{(}\DataTypeTok{hist =} \OtherTok{NULL}\NormalTok{),}\DataTypeTok{integer =} \KeywordTok{list}\NormalTok{(}\DataTypeTok{hist =} \OtherTok{NULL}\NormalTok{))}
+\NormalTok{skimr}\OperatorTok{::}\KeywordTok{skim_to_wide}\NormalTok{(creditdata) }\OperatorTok{%>%}\StringTok{ }\NormalTok{knitr}\OperatorTok{::}\KeywordTok{kable}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}lllllllllllllll@{}}
+\toprule
+type & variable & missing & complete & n & n\_unique & top\_counts &
+ordered & mean & sd & p0 & p25 & p50 & p75 & p100\tabularnewline
+\midrule
+\endhead
+factor & DEFAULT & 0 & 30000 & 30000 & 2 & 0: 23364, 1: 6636, NA: 0 &
+FALSE & NA & NA & NA & NA & NA & NA & NA\tabularnewline
+factor & EDUCATION & 0 & 30000 & 30000 & 7 & 2: 14030, 1: 10585, 3:
+4917, 5: 280 & FALSE & NA & NA & NA & NA & NA & NA & NA\tabularnewline
+factor & MARRIAGE & 0 & 30000 & 30000 & 4 & 2: 15964, 1: 13659, 3: 323,
+0: 54 & FALSE & NA & NA & NA & NA & NA & NA & NA\tabularnewline
+factor & SEX & 0 & 30000 & 30000 & 2 & 2: 18112, 1: 11888, NA: 0 & FALSE
+& NA & NA & NA & NA & NA & NA & NA\tabularnewline
+integer & AGE & 0 & 30000 & 30000 & NA & NA & NA & 35.49 & 9.22 & 21 &
+28 & 34 & 41 & 79\tabularnewline
+integer & BILL\_AMT1 & 0 & 30000 & 30000 & NA & NA & NA & 51223.33 &
+73635.86 & -165580 & 3558.75 & 22381.5 & 67091 & 964511\tabularnewline
+integer & BILL\_AMT2 & 0 & 30000 & 30000 & NA & NA & NA & 49179.08 &
+71173.77 & -69777 & 2984.75 & 21200 & 64006.25 & 983931\tabularnewline
+integer & BILL\_AMT3 & 0 & 30000 & 30000 & NA & NA & NA & 47013.15 &
+69349.39 & -157264 & 2666.25 & 20088.5 & 60164.75 &
+1664089\tabularnewline
+integer & BILL\_AMT4 & 0 & 30000 & 30000 & NA & NA & NA & 43262.95 &
+64332.86 & -170000 & 2326.75 & 19052 & 54506 & 891586\tabularnewline
+integer & BILL\_AMT5 & 0 & 30000 & 30000 & NA & NA & NA & 40311.4 &
+60797.16 & -81334 & 1763 & 18104.5 & 50190.5 & 927171\tabularnewline
+integer & BILL\_AMT6 & 0 & 30000 & 30000 & NA & NA & NA & 38871.76 &
+59554.11 & -339603 & 1256 & 17071 & 49198.25 & 961664\tabularnewline
+integer & ID & 0 & 30000 & 30000 & NA & NA & NA & 15000.5 & 8660.4 & 1 &
+7500.75 & 15000.5 & 22500.25 & 30000\tabularnewline
+integer & LIMIT\_BAL & 0 & 30000 & 30000 & NA & NA & NA & 167484.32 &
+129747.66 & 10000 & 50000 & 140000 & 240000 & 1e+06\tabularnewline
+integer & PAY\_0 & 0 & 30000 & 30000 & NA & NA & NA & -0.017 & 1.12 & -2
+& -1 & 0 & 0 & 8\tabularnewline
+integer & PAY\_2 & 0 & 30000 & 30000 & NA & NA & NA & -0.13 & 1.2 & -2 &
+-1 & 0 & 0 & 8\tabularnewline
+integer & PAY\_3 & 0 & 30000 & 30000 & NA & NA & NA & -0.17 & 1.2 & -2 &
+-1 & 0 & 0 & 8\tabularnewline
+integer & PAY\_4 & 0 & 30000 & 30000 & NA & NA & NA & -0.22 & 1.17 & -2
+& -1 & 0 & 0 & 8\tabularnewline
+integer & PAY\_5 & 0 & 30000 & 30000 & NA & NA & NA & -0.27 & 1.13 & -2
+& -1 & 0 & 0 & 8\tabularnewline
+integer & PAY\_6 & 0 & 30000 & 30000 & NA & NA & NA & -0.29 & 1.15 & -2
+& -1 & 0 & 0 & 8\tabularnewline
+integer & PAY\_AMT1 & 0 & 30000 & 30000 & NA & NA & NA & 5663.58 &
+16563.28 & 0 & 1000 & 2100 & 5006 & 873552\tabularnewline
+integer & PAY\_AMT2 & 0 & 30000 & 30000 & NA & NA & NA & 5921.16 &
+23040.87 & 0 & 833 & 2009 & 5000 & 1684259\tabularnewline
+integer & PAY\_AMT3 & 0 & 30000 & 30000 & NA & NA & NA & 5225.68 &
+17606.96 & 0 & 390 & 1800 & 4505 & 9e+05\tabularnewline
+integer & PAY\_AMT4 & 0 & 30000 & 30000 & NA & NA & NA & 4826.08 &
+15666.16 & 0 & 296 & 1500 & 4013.25 & 621000\tabularnewline
+integer & PAY\_AMT5 & 0 & 30000 & 30000 & NA & NA & NA & 4799.39 &
+15278.31 & 0 & 252.5 & 1500 & 4031.5 & 426529\tabularnewline
+integer & PAY\_AMT6 & 0 & 30000 & 30000 & NA & NA & NA & 5215.5 &
+17777.47 & 0 & 117.75 & 1500 & 4000 & 528666\tabularnewline
+numeric & data.group & 0 & 30000 & 30000 & NA & NA & NA & 1.74 & 0.83 &
+1 & 1 & 1 & 2 & 3\tabularnewline
+numeric & test & 0 & 30000 & 30000 & NA & NA & NA & 0.24 & 0.43 & 0 & 0
+& 0 & 0 & 1\tabularnewline
+numeric & train & 0 & 30000 & 30000 & NA & NA & NA & 0.51 & 0.5 & 0 & 0
+& 1 & 1 & 1\tabularnewline
+numeric & u & 0 & 30000 & 30000 & NA & NA & NA & 0.5 & 0.29 & 2.5e-05 &
+0.25 & 0.49 & 0.75 & 1\tabularnewline
+numeric & validate & 0 & 30000 & 30000 & NA & NA & NA & 0.25 & 0.43 & 0
+& 0 & 0 & 0 & 1\tabularnewline
+\bottomrule
+\end{longtable}
+
+\hypertarget{data-1}{%
+\subsection{Data}\label{data-1}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{group_by}\NormalTok{(data.group) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{summarise}\NormalTok{(}\DataTypeTok{datapoints =} \KeywordTok{n}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## # A tibble: 3 x 2
+##   data.group datapoints
+##        <dbl>      <int>
+## 1          1      15180
+## 2          2       7323
+## 3          3       7497
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(train,test,validate) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{colSums}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    train     test validate 
+##    15180     7323     7497
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Bill amount -ve ? }
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(}\KeywordTok{matches}\NormalTok{(}\StringTok{"BILL_|PAY_|DEF"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\CommentTok{#filter(BILL_AMT1 < 0 ) %>% }
+\StringTok{  }\KeywordTok{filter_at}\NormalTok{(}\KeywordTok{vars}\NormalTok{(}\KeywordTok{matches}\NormalTok{(}\StringTok{'PAY_[0-9]'}\NormalTok{)),}\KeywordTok{all_vars}\NormalTok{(.}\OperatorTok{==}\DecValTok{0}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# ------------------------------------------------------------}
+\CommentTok{# PAY RATIO defined as payment over bill }
+\CommentTok{# Make the PAY_RATIO as 1 when the buill and pay amounts are 0}
+\CommentTok{#-------------------------------------------------------------}
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{PAY_RATIO2 =} \KeywordTok{ifelse}\NormalTok{(PAY_AMT1}\OperatorTok{==}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{BILL_AMT2}\OperatorTok{==}\DecValTok{0}\OperatorTok{|}\NormalTok{BILL_AMT2 }\OperatorTok{<=}\StringTok{ }\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,PAY_AMT1}\OperatorTok{/}\NormalTok{BILL_AMT2),}
+         \DataTypeTok{PAY_RATIO3 =} \KeywordTok{ifelse}\NormalTok{(PAY_AMT2}\OperatorTok{==}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{BILL_AMT3}\OperatorTok{==}\StringTok{ }\DecValTok{0}\OperatorTok{|}\NormalTok{BILL_AMT3 }\OperatorTok{<=}\StringTok{ }\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,PAY_AMT2}\OperatorTok{/}\NormalTok{BILL_AMT3),}
+         \DataTypeTok{PAY_RATIO4 =} \KeywordTok{ifelse}\NormalTok{(PAY_AMT3}\OperatorTok{==}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{BILL_AMT4}\OperatorTok{==}\DecValTok{0}\OperatorTok{|}\NormalTok{BILL_AMT4 }\OperatorTok{<=}\StringTok{ }\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,PAY_AMT3}\OperatorTok{/}\NormalTok{BILL_AMT4),}
+         \DataTypeTok{PAY_RATIO5 =} \KeywordTok{ifelse}\NormalTok{(PAY_AMT4}\OperatorTok{==}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{BILL_AMT5}\OperatorTok{==}\DecValTok{0}\OperatorTok{|}\NormalTok{BILL_AMT5 }\OperatorTok{<=}\StringTok{ }\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,PAY_AMT4}\OperatorTok{/}\NormalTok{BILL_AMT5),}
+         \DataTypeTok{PAY_RATIO6 =} \KeywordTok{ifelse}\NormalTok{(PAY_AMT5}\OperatorTok{==}\DecValTok{0} \OperatorTok{&}\StringTok{ }\NormalTok{BILL_AMT6}\OperatorTok{==}\DecValTok{0}\OperatorTok{|}\NormalTok{BILL_AMT6 }\OperatorTok{<=}\StringTok{ }\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,PAY_AMT5}\OperatorTok{/}\NormalTok{BILL_AMT6)) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{PAY_RATIOAvg =} \KeywordTok{rowMeans}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"PAY_RATIO"}\NormalTok{))),}
+         \DataTypeTok{PAY_RATIOAvg2 =} \KeywordTok{ifelse}\NormalTok{(}\KeywordTok{rowSums}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{matches}\NormalTok{(}\StringTok{"BILL_AMT[2-6]"}\NormalTok{)))}\OperatorTok{==}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{,}\KeywordTok{rowSums}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{matches}\NormalTok{(}\StringTok{"PAY_AMT[1-5]"}\NormalTok{)))}\OperatorTok{/}\KeywordTok{rowSums}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{matches}\NormalTok{(}\StringTok{"BILL_AMT[2-6]"}\NormalTok{)))))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{library}\NormalTok{(matrixStats)}
+
+\CommentTok{# Utilization defined as a % usage of credit limit. When there is a negative bill the util is made 0.}
+
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{UTIL_1 =} \KeywordTok{ifelse}\NormalTok{(BILL_AMT1}\OperatorTok{/}\NormalTok{LIMIT_BAL }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{ , }\DecValTok{0}\NormalTok{ , BILL_AMT1}\OperatorTok{/}\NormalTok{LIMIT_BAL),}
+         \DataTypeTok{UTIL_2 =} \KeywordTok{ifelse}\NormalTok{(BILL_AMT2}\OperatorTok{/}\NormalTok{LIMIT_BAL }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{ , }\DecValTok{0}\NormalTok{ , BILL_AMT2}\OperatorTok{/}\NormalTok{LIMIT_BAL),}
+         \DataTypeTok{UTIL_3 =} \KeywordTok{ifelse}\NormalTok{(BILL_AMT3}\OperatorTok{/}\NormalTok{LIMIT_BAL }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{ , }\DecValTok{0}\NormalTok{ , BILL_AMT3}\OperatorTok{/}\NormalTok{LIMIT_BAL),}
+         \DataTypeTok{UTIL_4 =} \KeywordTok{ifelse}\NormalTok{(BILL_AMT4}\OperatorTok{/}\NormalTok{LIMIT_BAL }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{ , }\DecValTok{0}\NormalTok{ , BILL_AMT4}\OperatorTok{/}\NormalTok{LIMIT_BAL),}
+         \DataTypeTok{UTIL_5 =} \KeywordTok{ifelse}\NormalTok{(BILL_AMT5}\OperatorTok{/}\NormalTok{LIMIT_BAL }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{ , }\DecValTok{0}\NormalTok{ , BILL_AMT5}\OperatorTok{/}\NormalTok{LIMIT_BAL),}
+         \DataTypeTok{UTIL_6 =} \KeywordTok{ifelse}\NormalTok{(BILL_AMT6}\OperatorTok{/}\NormalTok{LIMIT_BAL }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{ , }\DecValTok{0}\NormalTok{ , BILL_AMT6}\OperatorTok{/}\NormalTok{LIMIT_BAL))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# notice the utilization of the population is increasing over time?}
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"UTIL"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\NormalTok{skimr}\OperatorTok{::}\KeywordTok{skim}\NormalTok{()}
+
+\CommentTok{# balance increasing?}
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"PAY_RAT"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\NormalTok{skimr}\OperatorTok{::}\KeywordTok{skim}\NormalTok{()}
+
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"BILL_AMT"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\NormalTok{skimr}\OperatorTok{::}\KeywordTok{skim}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{#--------------------------------------------------------------------------------------------------------------}
+\CommentTok{# While we that the median balance increases over time, how much of the population is causing this to increase}
+\CommentTok{# Calculate the difference between subsequent months in UTIL and BIll_AMTs}
+\CommentTok{#--------------------------------------------------------------------------------------------------------------}
+
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{UTIL_Avg =} \KeywordTok{rowMeans}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"UTIL"}\NormalTok{))),}
+         \DataTypeTok{UTILMR5 =}\NormalTok{ UTIL_}\DecValTok{6} \OperatorTok{-}\StringTok{ }\NormalTok{UTIL_}\DecValTok{5}\NormalTok{,}
+         \DataTypeTok{UTILMR4 =}\NormalTok{ UTIL_}\DecValTok{5} \OperatorTok{-}\StringTok{ }\NormalTok{UTIL_}\DecValTok{4}\NormalTok{,}
+         \DataTypeTok{UTILMR3 =}\NormalTok{ UTIL_}\DecValTok{4} \OperatorTok{-}\StringTok{ }\NormalTok{UTIL_}\DecValTok{3}\NormalTok{,}
+         \DataTypeTok{UTILMR2 =}\NormalTok{ UTIL_}\DecValTok{3} \OperatorTok{-}\StringTok{ }\NormalTok{UTIL_}\DecValTok{2}\NormalTok{,}
+         \DataTypeTok{UTILMR1 =}\NormalTok{ UTIL_}\DecValTok{2} \OperatorTok{-}\StringTok{ }\NormalTok{UTIL_}\DecValTok{1}\NormalTok{,}
+         \DataTypeTok{AvgBILL =} \KeywordTok{rowMeans}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"BILL_AMT"}\NormalTok{))),}
+         \DataTypeTok{stdBILL =} \KeywordTok{rowSds}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"BILL_AMT"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{as.matrix}\NormalTok{())) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{ppk =}\NormalTok{ (LIMIT_BAL }\OperatorTok{-}\StringTok{ }\NormalTok{AvgBILL)}\OperatorTok{/}\NormalTok{(}\DecValTok{3}\OperatorTok{*}\NormalTok{stdBILL),}
+         \DataTypeTok{BILLAMTMR5 =}\NormalTok{ BILL_AMT6 }\OperatorTok{-}\StringTok{ }\NormalTok{BILL_AMT5,}
+         \DataTypeTok{BILLAMTMR4 =}\NormalTok{ BILL_AMT5 }\OperatorTok{-}\StringTok{ }\NormalTok{BILL_AMT4,}
+         \DataTypeTok{BILLAMTMR3 =}\NormalTok{ BILL_AMT4 }\OperatorTok{-}\StringTok{ }\NormalTok{BILL_AMT3,}
+         \DataTypeTok{BILLAMTMR2 =}\NormalTok{ BILL_AMT3 }\OperatorTok{-}\StringTok{ }\NormalTok{BILL_AMT2,}
+         \DataTypeTok{BILLAMTMR1 =}\NormalTok{ BILL_AMT2 }\OperatorTok{-}\StringTok{ }\NormalTok{BILL_AMT1,}
+         \DataTypeTok{PAYAvg =} \KeywordTok{rowMeans}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"PAY_AMT"}\NormalTok{))))}
+
+
+\NormalTok{creditdata }\OperatorTok{%<>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{PAYMR5 =}\NormalTok{ PAY_AMT6 }\OperatorTok{-}\StringTok{ }\NormalTok{PAY_AMT5,}
+         \DataTypeTok{PAYMR4 =}\NormalTok{ PAY_AMT5 }\OperatorTok{-}\StringTok{ }\NormalTok{PAY_AMT4,}
+         \DataTypeTok{PAYMR3 =}\NormalTok{ PAY_AMT4 }\OperatorTok{-}\StringTok{ }\NormalTok{PAY_AMT3,}
+         \DataTypeTok{PAYMR2 =}\NormalTok{ PAY_AMT3 }\OperatorTok{-}\StringTok{ }\NormalTok{PAY_AMT2,}
+         \DataTypeTok{PAYMR1 =}\NormalTok{ PAY_AMT2 }\OperatorTok{-}\StringTok{ }\NormalTok{PAY_AMT1)}
+
+
+  
+
+\CommentTok{# Customers with increasing utilization over time}
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter_at}\NormalTok{(}\KeywordTok{vars}\NormalTok{(}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"UTILM"}\NormalTok{)),}\KeywordTok{all_vars}\NormalTok{(. }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(ID) ->IDs}
+
+\CommentTok{# customers with increasing Balance over time}
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter_at}\NormalTok{(}\KeywordTok{vars}\NormalTok{(}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"BILLAMTMR"}\NormalTok{)),}\KeywordTok{all_vars}\NormalTok{(. }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(ID) ->BalIDs}
+
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }\KeywordTok{filter_at}\NormalTok{(}\KeywordTok{vars}\NormalTok{(}\KeywordTok{starts_with}\NormalTok{(}\StringTok{"PAYMR"}\NormalTok{)),}\KeywordTok{all_vars}\NormalTok{(. }\OperatorTok{>}\StringTok{ }\DecValTok{0}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(ID) ->payIDs}
+
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{utilFlag =} \KeywordTok{ifelse}\NormalTok{(ID }\OperatorTok{%in%}\StringTok{ }\NormalTok{IDs}\OperatorTok{$}\NormalTok{ID,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{))}
+
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{balFlag =} \KeywordTok{ifelse}\NormalTok{(ID }\OperatorTok{%in%}\StringTok{ }\NormalTok{BalIDs}\OperatorTok{$}\NormalTok{ID,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{))}
+
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{payFlag =} \KeywordTok{ifelse}\NormalTok{(ID }\OperatorTok{%in%}\StringTok{ }\NormalTok{payIDs}\OperatorTok{$}\NormalTok{ID,}\DecValTok{1}\NormalTok{,}\DecValTok{0}\NormalTok{))}
+
+
+\KeywordTok{table}\NormalTok{(creditdata}\OperatorTok{$}\NormalTok{DEFAULT,creditdata}\OperatorTok{$}\NormalTok{utilFlag)}
+
+\KeywordTok{chisq.test}\NormalTok{(}\KeywordTok{table}\NormalTok{(creditdata}\OperatorTok{$}\NormalTok{DEFAULT,creditdata}\OperatorTok{$}\NormalTok{utilFlag))}
+
+
+\KeywordTok{table}\NormalTok{(creditdata}\OperatorTok{$}\NormalTok{DEFAULT,creditdata}\OperatorTok{$}\NormalTok{balFlag)}
+
+\KeywordTok{chisq.test}\NormalTok{(}\KeywordTok{table}\NormalTok{(creditdata}\OperatorTok{$}\NormalTok{DEFAULT,creditdata}\OperatorTok{$}\NormalTok{balFlag))}
+
+\KeywordTok{table}\NormalTok{(creditdata}\OperatorTok{$}\NormalTok{DEFAULT,creditdata}\OperatorTok{$}\NormalTok{payFlag)}
+
+\KeywordTok{chisq.test}\NormalTok{(}\KeywordTok{table}\NormalTok{(creditdata}\OperatorTok{$}\NormalTok{DEFAULT,creditdata}\OperatorTok{$}\NormalTok{payFlag))}
+
+
+\CommentTok{## Get percentage increase between month 6 and month 1}
+
+\NormalTok{creditdata }\OperatorTok{%<>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{PerBALinc =}\NormalTok{ (BILL_AMT6 }\OperatorTok{-}\StringTok{ }\NormalTok{BILL_AMT1)}\OperatorTok{/}\NormalTok{BILL_AMT6,}
+         \DataTypeTok{PerUTILinc =}\NormalTok{ (UTIL_}\DecValTok{6} \OperatorTok{-}\StringTok{ }\NormalTok{UTIL_}\DecValTok{1}\NormalTok{)}\OperatorTok{/}\NormalTok{UTIL_}\DecValTok{6}\NormalTok{,}
+         \DataTypeTok{PerUTILinc2 =}\NormalTok{ (BILL_AMT6 }\OperatorTok{-}\StringTok{ }\NormalTok{BILL_AMT1)}\OperatorTok{/}\NormalTok{LIMIT_BAL)}
+
+\CommentTok{# Customers delinquent often}
+\NormalTok{creditdata }\OperatorTok{%<>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{Max_Dlq =} \KeywordTok{ifelse}\NormalTok{(}\KeywordTok{rowMaxs}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{matches}\NormalTok{(}\StringTok{"PAY_[0-9]"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{as.matrix}\NormalTok{()) }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{,}\DecValTok{0}\NormalTok{,}\KeywordTok{rowMaxs}\NormalTok{(}\KeywordTok{select}\NormalTok{(.,}\KeywordTok{matches}\NormalTok{(}\StringTok{"PAY_[0-9]"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{as.matrix}\NormalTok{()) ))}
+
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(ID,}\KeywordTok{matches}\NormalTok{(}\StringTok{"PAY_[0-9]"}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{gather}\NormalTok{(}\DataTypeTok{key =} \StringTok{"Period"}\NormalTok{, }\DataTypeTok{value =} \StringTok{"DLQ"}\NormalTok{,}\OperatorTok{-}\NormalTok{ID) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{DLQ =} \KeywordTok{ifelse}\NormalTok{(DLQ }\OperatorTok{<}\StringTok{ }\DecValTok{0}\NormalTok{, }\DecValTok{0}\NormalTok{,DLQ)) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{group_by}\NormalTok{(ID) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{summarise}\NormalTok{(}\DataTypeTok{DLQs =} \KeywordTok{count}\NormalTok{(DLQ }\OperatorTok{>}\StringTok{ }\DecValTok{0}\NormalTok{),}
+            \DataTypeTok{DLQ_Total =} \KeywordTok{sum}\NormalTok{(DLQ),}
+            \DataTypeTok{DLQ_Max =} \KeywordTok{max}\NormalTok{(DLQ)) ->}\StringTok{ }\NormalTok{Delequencies}
+
+\NormalTok{creditdata }\OperatorTok{%<>%}\StringTok{ }
+\StringTok{  }\KeywordTok{left_join}\NormalTok{(Delequencies)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{feature-selection}{%
+\subsection{Feature Selection}\label{feature-selection}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{creditdata }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(train }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(}\OperatorTok{-}\NormalTok{train,}\OperatorTok{-}\NormalTok{test,}\OperatorTok{-}\NormalTok{validate,}\OperatorTok{-}\NormalTok{u,}\OperatorTok{-}\NormalTok{data.group,}\OperatorTok{-}\NormalTok{ID) ->}\StringTok{ }\NormalTok{trainData}
+
+\NormalTok{ctrl <-}\StringTok{ }\KeywordTok{trainControl}\NormalTok{(}\DataTypeTok{method =} \StringTok{"cv"}\NormalTok{,}
+                     \DataTypeTok{summaryFunction =}\NormalTok{ twoClassSummary,}
+                     \DataTypeTok{classProbs =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{x =}\StringTok{ }\NormalTok{trainData }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\OperatorTok{-}\NormalTok{DEFAULT)}
+\NormalTok{y =}\StringTok{ }\KeywordTok{as.factor}\NormalTok{(creditdata}\OperatorTok{$}\NormalTok{DEFAULT[creditdata}\OperatorTok{$}\NormalTok{train}\OperatorTok{==}\DecValTok{1}\NormalTok{])}
+\KeywordTok{levels}\NormalTok{(y) <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\StringTok{"no"}\NormalTok{,}\StringTok{"yes"}\NormalTok{)}
+\NormalTok{rpartFit <-}\StringTok{ }\KeywordTok{train}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ x, }
+                  \DataTypeTok{y =}\NormalTok{ y,}
+                  \DataTypeTok{method =} \StringTok{"rpart"}\NormalTok{,}
+                  \DataTypeTok{tuneLength =} \DecValTok{10}\NormalTok{,}
+                  \DataTypeTok{metric =} \StringTok{"ROC"}\NormalTok{,}
+                  \DataTypeTok{trControl =}\NormalTok{ ctrl)}
+
+\KeywordTok{plot}\NormalTok{(rpartFit)}
+
+
+
+\KeywordTok{library}\NormalTok{(doParallel)}
+\NormalTok{cl <-}\StringTok{ }\KeywordTok{makePSOCKcluster}\NormalTok{(}\DecValTok{5}\NormalTok{)}
+\KeywordTok{registerDoParallel}\NormalTok{(cl)}
+
+\NormalTok{rfFit <-}\StringTok{ }\KeywordTok{train}\NormalTok{(}\DataTypeTok{x =}\NormalTok{ x }\OperatorTok{%>%}\StringTok{ }\KeywordTok{select}\NormalTok{(}\OperatorTok{-}\NormalTok{ppk,}\OperatorTok{-}\NormalTok{PerBALinc,}\OperatorTok{-}\NormalTok{PerUTILinc) }\OperatorTok{%>%}\StringTok{ }\KeywordTok{as.matrix}\NormalTok{(), }
+                  \DataTypeTok{y =}\NormalTok{ y,}
+                  \DataTypeTok{method =} \StringTok{"rf"}\NormalTok{,}
+                  \DataTypeTok{tuneLength =} \DecValTok{10}\NormalTok{,}
+                  \DataTypeTok{metric =} \StringTok{"ROC"}\NormalTok{,}
+                  \DataTypeTok{trControl =}\NormalTok{ ctrl,}
+\NormalTok{                  )}
+
+\KeywordTok{stopCluster}\NormalTok{(cl)}
+
+\KeywordTok{plot}\NormalTok{(rfFit)}
+\KeywordTok{plot}\NormalTok{(}\KeywordTok{varImp}\NormalTok{(rfFit))}
+
+\CommentTok{#skimr::skim(x)}
+\end{Highlighting}
+\end{Shaded}
+
+
+\end{document}

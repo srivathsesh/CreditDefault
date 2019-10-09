@@ -2,16 +2,20 @@
 title: "Credit Default Prediction"
 author: "Sri Seshadri"
 date: "9/28/2019"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Introduction
+# 1. Introduction
 
-## Data
+# 2. Executive Summary
+
+# 3. Data
 
 ```{r}
 library(tidyverse)
@@ -22,38 +26,85 @@ library(pander)
 creditdata <- readRDS("credit_card_default.RData")
 
 creditdata <- as.data.frame(creditdata) %>% as_tibble()
+creditdata %<>% 
+  mutate_at(c("DEFAULT","EDUCATION","MARRIAGE","SEX","data.group"),.funs = as.factor)
 # Get stats on the data
 skimr::skim_with(numeric = list(hist = NULL),integer = list(hist = NULL))
-skimr::skim(creditdata) %>% pander()
+skimr::skim_to_wide(creditdata)
 
 ```
 
+## 3.1 Data Issues
+
+1. Unexpected categories in Education and Marriage
+2. There are negative bill amounts; they are assumed to be overpayment of credits incurred.
+3. PAY_0 is assumed to be PAY_1
+4. Repayment status has negative values below -1. 
+
 ```{r}
+lattice::barchart(~table(EDUCATION), creditdata, ylab = "Education", xlab = "Frequency")
+
+```
+
+
+```{r}
+creditdata %>% 
+  mutate(data.group = ifelse(data.group == 1, "Train", ifelse(data.group == 2, "Test", "Validate"))) %>% 
+  group_by(data.group) %>% 
+  summarise(datapoints = n()) %>% knitr::kable()
+
+creditdata %>% 
+  select(train,test,validate) %>% 
+  colSums()
+```
+
+
+
+```{r, eval = F}
 # Bill amount -ve ? 
 creditdata %>% 
   select(matches("BILL_|PAY_|DEF")) %>% 
   #filter(BILL_AMT1 < 0 ) %>% 
-  filter_at(vars(matches('PAY_[0-9]')),all_vars(.==0))
+  filter_at(vars(matches('PAY_[0-9]')),any_vars(.==1)) %>% View()
+
+
+creditdata %>% 
+  mutate(BILLs = rowSums2(select(.,matches("BILL_AMT[2-6]")) %>% as.matrix()),
+         Paid = rowSums2(select(.,matches("PAY_AMT[1-5]")) %>% as.matrix())) %>% 
+  mutate(PaidFully = ifelse(BILLs - Paid ==0, 1, 0)) %>% 
+  select(ID,PaidFully) %>% 
+  filter(PaidFully == 1)
 
 ```
+# 4. Feature Engineering
 
+1. Pay Ratip
 
 ```{r}
+
+# ------------------------------------------------------------
+# PAY RATIO defined as payment over bill 
+# Make the PAY_RATIO as 1 when the buill and pay amounts are 0
+#-------------------------------------------------------------
 creditdata %<>% 
-  mutate(PAY_RATIO2 = ifelse(PAY_AMT1==0 & BILL_AMT2==0|BILL_AMT2 <= 0,1,PAY_AMT1/BILL_AMT2),
-         PAY_RATIO3 = ifelse(PAY_AMT2==0 & BILL_AMT3== 0|BILL_AMT3 <= 0,1,PAY_AMT2/BILL_AMT3),
-         PAY_RATIO4 = ifelse(PAY_AMT3==0 & BILL_AMT4==0|BILL_AMT4 <= 0,1,PAY_AMT3/BILL_AMT4),
-         PAY_RATIO5 = ifelse(PAY_AMT4==0 & BILL_AMT5==0|BILL_AMT5 <= 0,1,PAY_AMT4/BILL_AMT5),
-         PAY_RATIO6 = ifelse(PAY_AMT5==0 & BILL_AMT6==0|BILL_AMT6 <= 0,1,PAY_AMT5/BILL_AMT6)) %>% 
-  mutate(PAY_RATIOAvg = rowMeans(select(.,starts_with("PAY_RATIO"))),
-         PAY_RATIOAvg2 = ifelse(rowSums(select(.,matches("BILL_AMT[2-6]")))==0,1,rowSums(select(.,matches("PAY_AMT[1-5]")))/rowSums(select(.,matches("BILL_AMT[2-6]")))))
+  mutate(PMT_RATIO2 = ifelse(PAY_AMT1==0 & BILL_AMT2==0|BILL_AMT2 <= 0,1,PAY_AMT1/BILL_AMT2),
+         PMT_RATIO3 = ifelse(PAY_AMT2==0 & BILL_AMT3== 0|BILL_AMT3 <= 0,1,PAY_AMT2/BILL_AMT3),
+         PMT_RATIO4 = ifelse(PAY_AMT3==0 & BILL_AMT4==0|BILL_AMT4 <= 0,1,PAY_AMT3/BILL_AMT4),
+         PMT_RATIO5 = ifelse(PAY_AMT4==0 & BILL_AMT5==0|BILL_AMT5 <= 0,1,PAY_AMT4/BILL_AMT5),
+         PMT_RATIO6 = ifelse(PAY_AMT5==0 & BILL_AMT6==0|BILL_AMT6 <= 0,1,PAY_AMT5/BILL_AMT6)) %>% 
+  mutate(
+         Avg_PMT_RATIO = ifelse(rowSums(select(.,matches("BILL_AMT[2-6]")))==0,1,rowSums(select(.,matches("PAY_AMT[1-5]")))/rowSums(select(.,matches("BILL_AMT[2-6]")))))
 
 
 ```
 
+2. Utilization of Credit limit
 
 ```{r}
 library(matrixStats)
+
+# Utilization defined as a % usage of credit limit. When there is a negative bill the util is made 0.
+
 creditdata %<>% 
   mutate(UTIL_1 = ifelse(BILL_AMT1/LIMIT_BAL < 0 , 0 , BILL_AMT1/LIMIT_BAL),
          UTIL_2 = ifelse(BILL_AMT2/LIMIT_BAL < 0 , 0 , BILL_AMT2/LIMIT_BAL),
@@ -63,27 +114,62 @@ creditdata %<>%
          UTIL_6 = ifelse(BILL_AMT6/LIMIT_BAL < 0 , 0 , BILL_AMT6/LIMIT_BAL))
 ```
 
-```{r}
+```{r, eval = F}
+# notice the utilization of the population is increasing over time?
 creditdata %>% select(starts_with("UTIL")) %>% skimr::skim()
+
+# balance increasing?
+creditdata %>% select(starts_with("PAY_RAT")) %>% skimr::skim()
+
+creditdata %>% select(starts_with("BILL_AMT")) %>% skimr::skim()
+
 ```
 
+3. Average Bill and Payment amounts
+
+4. Velocity of Bill amount increase, payment amount decrease, utilization increase, pay ratio decrease.
+
 ```{r}
+#--------------------------------------------------------------------------------------------------------------
+# While we that the median balance increases over time, how much of the population is causing this to increase
+# Calculate the difference between subsequent months in UTIL and BIll_AMTs
+#--------------------------------------------------------------------------------------------------------------
+
 creditdata %<>% 
-  mutate(UTIL_Avg = rowMeans(select(.,starts_with("UTIL"))),
-         UTILMR5 = UTIL_6 - UTIL_5,
-         UTILMR4 = UTIL_5 - UTIL_4,
-         UTILMR3 = UTIL_4 - UTIL_3,
-         UTILMR2 = UTIL_3 - UTIL_2,
-         UTILMR1 = UTIL_2 - UTIL_1,
-         AvgBILL = rowMeans(select(.,starts_with("BILL_AMT"))),
+  mutate(Avg_UTIL = rowMeans(select(.,starts_with("UTIL"))),
+         UTILMR5 = UTIL_5 - UTIL_6,
+         UTILMR4 = UTIL_4 - UTIL_5,
+         UTILMR3 = UTIL_3 - UTIL_4,
+         UTILMR2 = UTIL_2 - UTIL_3,
+         UTILMR1 = UTIL_1 - UTIL_2,
+         Avg_BILL_Amt = rowMeans(select(.,starts_with("BILL_AMT")),na.rm = T),
          stdBILL = rowSds(select(.,starts_with("BILL_AMT")) %>% as.matrix())) %>% 
-  mutate(ppk = (LIMIT_BAL - AvgBILL)/(3*stdBILL),
-         BILLAMTMR5 = BILL_AMT6 - BILL_AMT5,
-         BILLAMTMR4 = BILL_AMT5 - BILL_AMT4,
-         BILLAMTMR3 = BILL_AMT4 - BILL_AMT3,
-         BILLAMTMR2 = BILL_AMT3 - BILL_AMT2,
-         BILLAMTMR1 = BILL_AMT2 - BILL_AMT1,
-         PAYAvg = rowMeans(select(.,starts_with("PAY_AMT"))))
+  mutate(ppk = (LIMIT_BAL - Avg_BILL_Amt)/(3*stdBILL),
+         BILLAMTMR5 = BILL_AMT5 - BILL_AMT6,
+         BILLAMTMR4 = BILL_AMT4 - BILL_AMT5,
+         BILLAMTMR3 = BILL_AMT3 - BILL_AMT4,
+         BILLAMTMR2 = BILL_AMT2 - BILL_AMT3,
+         BILLAMTMR1 = BILL_AMT1 - BILL_AMT2,
+         Avg_PMT_Amt = rowMeans(select(.,starts_with("PAY_AMT")),na.rm = T))
+
+
+creditdata %<>%
+  mutate(PAYMR5 = PAY_AMT5 - PAY_AMT6,
+         PAYMR4 = PAY_AMT4 - PAY_AMT5,
+         PAYMR3 = PAY_AMT3 - PAY_AMT4,
+         PAYMR2 = PAY_AMT2 - PAY_AMT3,
+         PAYMR1 = PAY_AMT1 - PAY_AMT2)
+
+creditdata %<>% 
+  mutate(Bal_Growth_6mo = BILL_AMT1 - BILL_AMT6,
+         UTIL_Growth_6mo = UTIL_1 - UTIL_6,
+         PMT_RATIOMR5 = PMT_RATIO5 - PMT_RATIO6,
+         PMT_RATIOMR4 = PMT_RATIO4 - PMT_RATIO5,
+         PMT_RATIOMR3 = PMT_RATIO3 - PMT_RATIO4,
+         PMT_RATIOMR2 = PMT_RATIO2 - PMT_RATIO3
+         )
+
+
   
 
 # Customers with increasing utilization over time
@@ -92,18 +178,60 @@ creditdata %>% filter_at(vars(starts_with("UTILM")),all_vars(. > 0)) %>% select(
 # customers with increasing Balance over time
 creditdata %>% filter_at(vars(starts_with("BILLAMTMR")),all_vars(. > 0)) %>% select(ID) ->BalIDs
 
+# customers with decreasing payments over time
+
+creditdata %>% filter_at(vars(starts_with("PAYMR")),all_vars(. < 0)) %>% select(ID) ->payIDs
+
+# customers with decreasing payment ratio over time
+
+creditdata %>% filter_at(vars(starts_with("PMT_RATIOMR")),all_vars(. < 0)) %>% select(ID) ->payRatioIDs
+
 creditdata %<>% 
   mutate(utilFlag = ifelse(ID %in% IDs$ID,1,0))
 
 creditdata %<>% 
-  mutate(balFalg = ifelse(ID %in% BalIDs$ID,1,0))
+  mutate(balFlag = ifelse(ID %in% BalIDs$ID,1,0))
+
+creditdata %<>% 
+  mutate(payFlag = ifelse(ID %in% payIDs$ID,1,0))
+
+creditdata %<>% 
+  mutate(payRatioFlag = ifelse(ID %in% payRatioIDs$ID,1,0))
+
+
+table(creditdata$DEFAULT,creditdata$utilFlag)
+
+chisq.test(table(creditdata$DEFAULT,creditdata$utilFlag))
+
+
+table(creditdata$DEFAULT,creditdata$balFlag)
+
+chisq.test(table(creditdata$DEFAULT,creditdata$balFlag))
+
+table(creditdata$DEFAULT,creditdata$payFlag)
+
+chisq.test(table(creditdata$DEFAULT,creditdata$payFlag))
+
 
 ## Get percentage increase between month 6 and month 1
 
 creditdata %<>%
   mutate(PerBALinc = (BILL_AMT6 - BILL_AMT1)/BILL_AMT6,
-         PerUTILinc = (UTIL_6 - UTIL_1)/UTIL_6,
-         PerUTILinc2 = (BILL_AMT6 - BILL_AMT1)/LIMIT_BAL)
+         PerUTILinc = (UTIL_6 - UTIL_1)/UTIL_6
+         )
+
+```
+
+5. Max Bill and Payments 
+
+```{r}
+creditdata %<>% 
+  mutate(Max_Bill_Amt = rowMaxs(select(.,matches("BILL_AMT[0-9]")) %>% as.matrix()),
+         Max_Pmt_Amt = rowMaxs(select(.,matches("PAY_AMT[0-9]")) %>% as.matrix()))
+```
+
+
+```{r}
 
 # Customers delinquent often
 creditdata %<>%
@@ -124,9 +252,24 @@ creditdata %<>%
 
   
 ```
-## Feature Selection
+6. Age Bucketing
 
 ```{r}
+creditdata %<>% 
+  mutate(AgeBins = cut(AGE,breaks = seq(from = 25, to = 80,by = 5)))
+  
+Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 7) -> tst
+
+Information::plot_infotables(tst,"AGE")
+
+```
+
+
+## Feature Selection
+
+
+
+```{r, eval = F}
 creditdata %>% 
   filter(train == 1) %>% 
   select(-train,-test,-validate,-u,-data.group,-ID) -> trainData
@@ -134,13 +277,37 @@ creditdata %>%
 ctrl <- trainControl(method = "cv",
                      summaryFunction = twoClassSummary,
                      classProbs = TRUE)
-x = trainData %>% select(-DEFAULT) %>% as.matrix()
-y = as.logical(trainData$DEFAULT)
-rpartFit <- train(x = as.matrix(x), 
+x = trainData %>% select(-DEFAULT)
+y = as.factor(creditdata$DEFAULT[creditdata$train==1])
+levels(y) <- c("no","yes")
+rpartFit <- train(x = x, 
                   y = y,
                   method = "rpart",
                   tuneLength = 10,
                   metric = "ROC",
                   trControl = ctrl)
+
+plot(rpartFit)
+
+
+
+library(doParallel)
+cl <- makePSOCKcluster(5)
+registerDoParallel(cl)
+
+rfFit <- train(x = x %>% select(-ppk,-PerBALinc,-PerUTILinc) %>% as.matrix(), 
+                  y = y,
+                  method = "rf",
+                  tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl,
+                  )
+
+stopCluster(cl)
+
+plot(rfFit)
+plot(varImp(rfFit))
+
+#skimr::skim(x)
 ```
 
