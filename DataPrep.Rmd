@@ -3,6 +3,7 @@ title: "Credit Default Prediction"
 author: "Sri Seshadri"
 date: "9/28/2019"
 output:
+  word_document: default
   pdf_document: default
   html_document: default
 ---
@@ -17,70 +18,303 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # 3. Data
 
-```{r}
+The 
+
+```{r, warning = F, message = F}
 library(tidyverse)
 library(caret)
 library(magrittr)
 library(pander)
+library(knitr)
+library(kableExtra)
+library(matrixStats)
+
+
+#------------------------------------------------------
+#               READ DATA IN
+#---------------------------------------------------------
 
 creditdata <- readRDS("credit_card_default.RData")
 
 creditdata <- as.data.frame(creditdata) %>% as_tibble()
 creditdata %<>% 
   mutate_at(c("DEFAULT","EDUCATION","MARRIAGE","SEX","data.group"),.funs = as.factor)
+
+#-----------------------------------------------------
+#              DATA DICTIONARY
+#-----------------------------------------------------
+
+Dict <- tibble(FEATURE = colnames(creditdata)[1:25],
+               DESCRIPTION =
+                 c("CUSTOMER ID",
+                   "CREDIT LIMIT",
+                   "GENDER",
+                   "EDUCATION",
+                   "MARITAL STATUS",
+                   "AGE",
+                   "REPAYMENT STATUS SEP 2005",
+                   "REPAYMENT STATUS AUG 2005",
+                   "REPAYMENT STATUS JUL 2005",
+                   "REPAYMENT STATUS JUN 2005",
+                   "REPAYMENT STATUS MAY 2005",
+                   "REPAYMENT STATUS APR 2005",
+                   "BILL SEP 2005",
+                   "BILL AUG 2005",
+                   "BILL JUL 2005",
+                   "BILL JUN 2005",
+                   "BILL MAY 2005",
+                   "BILL APR 2005",
+                   "PAYMENT SEP 2005",
+                   "PAYMENT AUG 2005",
+                   "PAYMENT JUL 2005",
+                   "PAYMENT JUN 2005",
+                   "PAYMENT MAY 2005",
+                   "PAYMENT APR 2005",
+                   "DEFAULTING CUSTOMER"
+                  ),
+               COMMENTS = 
+                 c("",
+                   "INCLUDES SUPPL CARDS",
+                   "1 = MALE, 2 = FEMALE",
+                   "1 = GRAD,2 = UNIV,3 = HIGH SCH,4 = OTHERS",
+                   "1=MARRIED,2=SINGLE,3=OTHERS",
+                   "YEARS",
+                   "assumed SEP 2005 ; -1 = DULY PAID,1= 1 MONTH DELAY, 2 = 2 MONTH DELAY... 9 = >=9 MONTH DELAY",
+                   "-1 = DULY PAID,1= 1 MONTH DELAY, 2 = 2 MONTH DELAY... 9 = >=9 MONTH DELAY",
+                   "-1 = DULY PAID,1= 1 MONTH DELAY, 2 = 2 MONTH DELAY... 9 = >=9 MONTH DELAY",
+                   "-1 = DULY PAID,1= 1 MONTH DELAY, 2 = 2 MONTH DELAY... 9 = >=9 MONTH DELAY",
+                   "-1 = DULY PAID,1= 1 MONTH DELAY, 2 = 2 MONTH DELAY... 9 = >=9 MONTH DELAY",
+                   "-1 = DULY PAID,1= 1 MONTH DELAY, 2 = 2 MONTH DELAY... 9 = >=9 MONTH DELAY",
+                   "STATEMENT BALANCE",
+                   "STATEMENT BALANCE",
+                   "STATEMENT BALANCE",
+                   "STATEMENT BALANCE",
+                   "STATEMENT BALANCE",
+                   "STATEMENT BALANCE",
+                   "PAYMENT MADE",
+                   "PAYMENT MADE",
+                   "PAYMENT MADE",
+                   "PAYMENT MADE",
+                   "PAYMENT MADE",
+                   "PAYMENT MADE",
+                   "1 = DEFAULT, 0 = NON-DEFAULT"
+                 )
+           
+       ) 
+
+#*******************************************
+#         REPORT DICTIONARY
+#*******************************************
+
+kable(Dict, align = "c",caption = "Data Dictionary") %>% 
+  kable_styling(full_width = F) %>% 
+  column_spec(3,width = "20em") %>% 
+  collapse_rows(columns = 3, valign = "middle")
+
+
 # Get stats on the data
 skimr::skim_with(numeric = list(hist = NULL),integer = list(hist = NULL))
-skimr::skim_to_wide(creditdata)
+skimr::skim_to_wide(creditdata) %>% 
+  select(-type,-ordered,-sd) %>% 
+  kable()
 
 ```
 
 ## 3.1 Data Issues
 
-1. Unexpected categories in Education and Marriage
+1. Unexpected categories in Education and Marriage. Data was inspected to potentially make a correction to the mislabeled values, no particular pattern for the mislabels emerged. Therefore the unexpected levles for EDUCATION and MARRIAGE would be mapped to "9-unknown"
 2. There are negative bill amounts; they are assumed to be overpayment of credits incurred.
 3. PAY_0 is assumed to be PAY_1
-4. Repayment status has negative values below -1. 
+4. Repayment status has values that include -2 and 0. They are assumed to be non-delayed payments. 
 
-```{r}
+```{r,eval=F}
 lattice::barchart(~table(EDUCATION), creditdata, ylab = "Education", xlab = "Frequency")
-
+lattice::bwplot(~LIMIT_BAL|EDUCATION,creditdata)
 ```
 
+## 3.2 Data Splitting
 
-```{r}
+The data was seperated into three groups for model training, validation and testing purposes. The number of customers in each of these groups are shown below.
+
+```{r,eval=F}
 creditdata %>% 
   mutate(data.group = ifelse(data.group == 1, "Train", ifelse(data.group == 2, "Test", "Validate"))) %>% 
   group_by(data.group) %>% 
-  summarise(datapoints = n()) %>% knitr::kable()
+  summarise(datapoints = n()) %>% knitr::kable(caption = "Train,Validation and Test splits")
 
-creditdata %>% 
-  select(train,test,validate) %>% 
-  colSums()
+
 ```
 
 
 
 ```{r, eval = F}
-# Bill amount -ve ? 
-creditdata %>% 
-  select(matches("BILL_|PAY_|DEF")) %>% 
-  #filter(BILL_AMT1 < 0 ) %>% 
-  filter_at(vars(matches('PAY_[0-9]')),any_vars(.==1)) %>% View()
+# # Bill amount -ve ? 
+# creditdata %>% 
+#   select(matches("BILL_|PAY_|DEF")) %>% 
+#   #filter(BILL_AMT1 < 0 ) %>% 
+#   filter_at(vars(matches('PAY_[0-9]')),any_vars(.==1)) %>% View()
 
 
-creditdata %>% 
-  mutate(BILLs = rowSums2(select(.,matches("BILL_AMT[2-6]")) %>% as.matrix()),
-         Paid = rowSums2(select(.,matches("PAY_AMT[1-5]")) %>% as.matrix())) %>% 
-  mutate(PaidFully = ifelse(BILLs - Paid ==0, 1, 0)) %>% 
-  select(ID,PaidFully) %>% 
-  filter(PaidFully == 1)
+# creditdata %>% 
+#   mutate(BILLs = rowSums2(select(.,matches("BILL_AMT[2-6]")) %>% as.matrix()),
+#          Paid = rowSums2(select(.,matches("PAY_AMT[1-5]")) %>% as.matrix())) %>% 
+#   mutate(PaidFully = ifelse(BILLs - Paid ==0, 1, 0)) %>% 
+#   select(ID,PaidFully) %>% 
+#   filter(PaidFully == 1)
 
 ```
 # 4. Feature Engineering
 
-1. Pay Ratip
+$\frac{\sum_{Month=1}^{5}PAY\_AMT_{Month}}{\sum_{Month=2}^{6}BILL\_AMT_{Month}}$
 
 ```{r}
+EngFeats <- tibble(
+  Features = c(
+    "PMT_RATIO2",
+    "PMT_RATIO3",
+    "PMT_RATIO4",
+    "PMT_RATIO5",
+    "PMT_RATIO6",
+    
+    "Avg_PMT_RATIO",
+    
+    "UTIL_1",
+    "UTIL_2",
+    "UTIL_3",
+    "UTIL_4",
+    "UTIL_5",
+    "UTIL_6",
+    
+    "UTILMR5",
+    "UTILMR4",
+    "UTILMR3",
+    "UTILMR2",
+    "UTILMR1",
+  
+   
+    "Avg_UTIL",
+    
+    "Avg_BILL_Amt",
+    
+     "BILLAMTMR5", 
+     "BILLAMTMR4",
+     "BILLAMTMR3",
+     "BILLAMTMR2",
+     "BILLAMTMR1",
+    
+     "Avg_PMT_Amt",
+    
+      "PAYMR5",
+      "PAYMR4",
+      "PAYMR3",
+      "PAYMR2",
+      "PAYMR1",
+    
+    "Bal_Growth_6mo", 
+    
+    "UTIL_Growth_6mo", 
+    
+         "PMT_RATIOMR5", 
+         "PMT_RATIOMR4",
+         "PMT_RATIOMR3", 
+         "PMT_RATIOMR2", 
+    
+    "UtilFlag",
+    
+    'balFlag',
+    
+    "payFlag",
+    
+    
+    "payRatioFlag",
+    
+    "Max_Bill_Amt",
+    
+    "Max_Pmt_Amt",
+    
+    "Max_Dlq"
+    
+    
+    
+  ),
+  Calculation = c('$\\frac{PAY\\_AMT1}{BILL\\_AMT2}$',
+                  '$\\frac{PAY\\_AMT2}{BILL\\_AMT3}$',
+                  '$\\frac{PAY\\_AMT3}{BILL\\_AMT4}$',
+                  '$\\frac{PAY\\_AMT4}{BILL\\_AMT5}$',
+                  '$\\frac{PAY\\_AMT5}{BILL\\_AMT6}$',
+  
+                  '$\\frac{\\sum_{Month=1}^{5}PAY\\_AMT_{Month}}{\\sum_{Month=2}^{6}BILL\\_AMT_{Month}}$',
+                  
+                  '$\\frac{BILL\\_AMT1}{LIMIT\\_BAL}$',
+                  '$\\frac{BILL\\_AMT2}{LIMIT\\_BAL}$',
+                  '$\\frac{BILL\\_AMT3}{LIMIT\\_BAL}$',
+                  '$\\frac{BILL\\_AMT4}{LIMIT\\_BAL}$',
+                  '$\\frac{BILL\\_AMT5}{LIMIT\\_BAL}$',
+                  '$\\frac{BILL\\_AMT6}{LIMIT\\_BAL}$',
+                  
+                  '$UTIL\\_5 - UTIL\\_6$',
+                  '$UTIL\\_4 - UTIL\\_5$',
+                  '$UTIL\\_3 - UTIL\\_4$',
+                  '$UTIL\\_2 - UTIL\\_3$',
+                  '$UTIL\\_1 - UTIL\\_2$',
+                  
+                  '$mean(UTIL1,UTIL2,UTIL3,UTIL4,UTIL6)$',
+                  
+                  '$mean(BILL\\_AMT1,BILL\\_AMT2,BILL\\_AMT3,BILL\\_AMT4,BILL\\_AMT6)$',
+                  
+                  '$BILL\\_AMT5 - BILL\\_AMT6$',
+                  '$BILL\\_AMT4 - BILL\\_AMT5$',
+                  '$BILL\\_AMT3 - BILL\\_AMT4$',
+                  '$BILL\\_AMT2 - BILL\\_AMT3$',
+                  '$BILL\\_AMT1 - BILL\\_AMT2$',
+                  
+                  '$mean(PAY\\_AMT1,PAY\\_AMT2,PAY\\_AMT3,PAY\\_AMT4,PAY\\_AMT6)$',
+                  
+                  
+                  '$PAY\\_AMT5 - PAY\\_AMT6$',
+                  '$PAY\\_AMT4 - PAY\\_AMT5$',
+                  '$PAY\\_AMT3 - PAY\\_AMT4$',
+                  '$PAY\\_AMT2 - PAY\\_AMT3$',
+                  '$PAY\\_AMT1 - PAY\\_AMT2$',
+                  
+                  "$BILL\\_AMT1 - BILL\\_AMT6$",
+                  
+                  "$UTIL\\_1 - UTIL\\_6$",
+                  
+                  "$PMT\\_RATIO5 - PMT\\_RATIO6$",
+                  "$PMT\\_RATIO4 - PMT\\_RATIO5$",
+                  "$PMT\\_RATIO3 - PMT\\_RATIO4$",
+                  "$PMT\\_RATIO2 - PMT\\_RATIO3$",
+                  
+                  "$\\forall{UTILMR5,UTILMR4,UTILMR3,UTILMR2,UTILMR1} > 0$",
+                  
+                  "$\\forall{BILLAMTMR5,BILLAMTMR4,BILLAMTMR3,BILLAMTMR2,BILLAMTMR1} > 0$",
+                  
+                  "$\\forall{PAYMR5,PAYMR4,PAYMR3,PAYMR2,PAYMR1} > 0$",
+                  
+                  "$\\forall{PMT\\_RATIOMR5,PMT\\_RATIOMR4,PMT\\_RATIOMR3,PMT\\_RATIOMR2} > 0$",
+                  
+                  '$max(BILL\\_AMT1,BILL\\_AMT2,BILL\\_AMT3,BILL\\_AMT4,BILL\\_AMT6)$',
+                  
+                  '$max(PAY\\_AMT1,PAY\\_AMT2,PAY\\_AMT3,PAY\\_AMT4,PAY\\_AMT6)$',
+                  
+                  '$max(PAY\\_1,PAY\\_2,PAY\\_3,PAY\\_4,PAY\\_5,PAY\\_6)$'
+                  
+                  
+                  
+                  
+                  
+                  
+  )
+
+)
+kable(EngFeats,escape = F)
+```
+
+
+1. Pay Ratio
+
+```{r,eval=F}
 
 # ------------------------------------------------------------
 # PAY RATIO defined as payment over bill 
@@ -100,7 +334,7 @@ creditdata %<>%
 
 2. Utilization of Credit limit
 
-```{r}
+```{r,eval=F}
 library(matrixStats)
 
 # Utilization defined as a % usage of credit limit. When there is a negative bill the util is made 0.
@@ -116,12 +350,12 @@ creditdata %<>%
 
 ```{r, eval = F}
 # notice the utilization of the population is increasing over time?
-creditdata %>% select(starts_with("UTIL")) %>% skimr::skim()
+# creditdata %>% select(starts_with("UTIL")) %>% skimr::skim()
 
 # balance increasing?
-creditdata %>% select(starts_with("PAY_RAT")) %>% skimr::skim()
+# creditdata %>% select(starts_with("PAY_RAT")) %>% skimr::skim()
 
-creditdata %>% select(starts_with("BILL_AMT")) %>% skimr::skim()
+# creditdata %>% select(starts_with("BILL_AMT")) %>% skimr::skim()
 
 ```
 
@@ -129,7 +363,7 @@ creditdata %>% select(starts_with("BILL_AMT")) %>% skimr::skim()
 
 4. Velocity of Bill amount increase, payment amount decrease, utilization increase, pay ratio decrease.
 
-```{r}
+```{r,eval=F}
 #--------------------------------------------------------------------------------------------------------------
 # While we that the median balance increases over time, how much of the population is causing this to increase
 # Calculate the difference between subsequent months in UTIL and BIll_AMTs
@@ -224,14 +458,14 @@ creditdata %<>%
 
 5. Max Bill and Payments 
 
-```{r}
+```{r,eval=F}
 creditdata %<>% 
   mutate(Max_Bill_Amt = rowMaxs(select(.,matches("BILL_AMT[0-9]")) %>% as.matrix()),
          Max_Pmt_Amt = rowMaxs(select(.,matches("PAY_AMT[0-9]")) %>% as.matrix()))
 ```
 
 
-```{r}
+```{r,eval=F}
 
 # Customers delinquent often
 creditdata %<>%
@@ -254,13 +488,51 @@ creditdata %<>%
 ```
 6. Age Bucketing
 
-```{r}
+```{r,eval=F}
 creditdata %<>% 
   mutate(AgeBins = cut(AGE,breaks = seq(from = 25, to = 80,by = 5)))
   
-Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 7) -> tst
+Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 7) -> tst7
 
-Information::plot_infotables(tst,"AGE")
+Information::plot_infotables(tst7,"AGE")
+
+Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 6) -> tst6
+
+Information::plot_infotables(tst6,"AGE")
+
+
+Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) -> tst5
+
+Information::plot_infotables(tst5,"AGE")
+
+Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 4) -> tst4
+
+Information::plot_infotables(tst4,"AGE")
+
+
+
+```
+
+
+```{r,eval=F}
+library(OneR)
+
+OneR::optbin(as.factor(DEFAULT) ~ AGE, data = creditdata, method = "infogain")-> optbin
+
+plot(optbin)
+
+```
+
+
+```{r,eval=F}
+tst6$Tables$AGE$AGE
+
+creditdata %<>% 
+  mutate(AGE_21_25 = ifelse(AGE>=21 & AGE<=25,1,0),
+         AGE_26_29 = ifelse(AGE>=26 & AGE<=29,1,0),
+         AGE_30_33 = ifelse(AGE>=30 & AGE<=33,1,0),
+         AGE_34_38 = ifelse(AGE>=34 & AGE<=38,1,0),
+         AGE_39_44 = ifelse(AGE>=39 & AGE<=44,1,0))
 
 ```
 
