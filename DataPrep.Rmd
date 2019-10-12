@@ -8,7 +8,7 @@ output:
   html_document: default
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,warning=F,message=F}
 knitr::opts_chunk$set(echo = F)
 ```
 
@@ -141,13 +141,24 @@ skimr::skim_to_wide(creditdata) %>%
 
 2. Similary for 54 customers, the value of $MARRIAGE$ is entered as 0. The 0 values are assumed to be "unknown" marital status.
 
-3. The variable $PAY/_0$ is assumed to be the repayment status as of September 2005.
+3. The variable PAY_0 is assumed to be the repayment status as of September 2005.Hence renamed as PAY_1
 
 4. Repayment status has values that include -2 and 0. Approximately 26,000 customers have repayment status that is not described in the dictionary. It is very likely that the data dictionary had an omission in describing -2 and 0. Thefore they are assumed to be non-delayed payments.
 
 
 ```{r,eval=T}
-lattice::barchart(~table(EDUCATION), creditdata, ylab = "Education", xlab = "Frequency")
+
+# remap unknown educaton to code 9
+creditdata %<>% 
+  mutate(EDUCATION = as.numeric(EDUCATION)-1) %>% 
+  mutate(EDUCATION = ifelse(EDUCATION %in% c(0,5,6),9,EDUCATION)) %>% 
+  mutate(EDUCATION = as.factor(EDUCATION)) 
+
+# rename PAY_0 to PAY_1
+creditdata %<>% 
+  rename(PAY_1 = PAY_0)
+
+
 
 ```
 
@@ -165,25 +176,13 @@ creditdata %>%
 ```
 
 
-
-```{r, eval = F}
-# # Bill amount -ve ? 
-# creditdata %>% 
-#   select(matches("BILL_|PAY_|DEF")) %>% 
-#   #filter(BILL_AMT1 < 0 ) %>% 
-#   filter_at(vars(matches('PAY_[0-9]')),any_vars(.==1)) %>% View()
-
-
-# creditdata %>% 
-#   mutate(BILLs = rowSums2(select(.,matches("BILL_AMT[2-6]")) %>% as.matrix()),
-#          Paid = rowSums2(select(.,matches("PAY_AMT[1-5]")) %>% as.matrix())) %>% 
-#   mutate(PaidFully = ifelse(BILLs - Paid ==0, 1, 0)) %>% 
-#   select(ID,PaidFully) %>% 
-#   filter(PaidFully == 1)
-
-```
 # 4. Feature Engineering
 
+Table 5 shows the features that are derived from the data along with their name and calculation method. The AGE and ppk (the distance between credit limit and average bill in units of 3 time standard deviations of bill amounts) variables are continuous variables that are binned using Weights Of Evidence (WOE) method.
+
+It is interesting to note that the WOE indicates that the customers in higher age group (over 39 years) have relatively higher risk of default compared to customers in the late twenties. Possibly due to potential loss in employment and difficulty to secure an income source. This hypothesis will be explored in the exploratory data analysis section below.
+
+ppk values were binned and replaced with their respective WOE. Figure 1 shows the binning of these variables.
 
 
 ```{r,eval=T}
@@ -223,14 +222,14 @@ EngFeats <- data.frame(
     
     "$Avg\\_PMT\\_RATIO$",
     
-    "$UTIL\\_1$ - $UTIL\\_6$ ",
+    "$UTIL\\_1$ to $UTIL\\_6$ ",
     # "$UTIL\\_2$",
     # "$UTIL\\_3$",
     # "$UTIL\\_4$",
     # "$UTIL\\_5$",
     # "$UTIL\\_6$",
     
-    "$UTILMR5$",
+    "$UTILMR1$ to $UTILMR5$",
     # "$UTILMR4$",
     # "$UTILMR3$",
     # "$UTILMR2$",
@@ -241,7 +240,7 @@ EngFeats <- data.frame(
     
     "$Avg\\_BILL\\_Amt$",
     
-     "$BILLAMTMR5$", 
+     "$BILLAMTMR1$ to $BILLAMTMR5$ ", 
      # "$BILLAMTMR4$",
      # "$BILLAMTMR3$",
      # "$BILLAMTMR2$",
@@ -249,7 +248,7 @@ EngFeats <- data.frame(
     
      "$Avg\\_PMT\\_Amt$",
     
-      "$PAYMR5$",
+      "$PAYMR1$ to $PAYMR5$",
       # "$PAYMR4$",
       # "$PAYMR3$",
       # "$PAYMR2$",
@@ -259,7 +258,7 @@ EngFeats <- data.frame(
     
     "$UTIL\\_Growth\\_6mo$", 
     
-         "$PMT\\_RATIOMR5$", 
+         "$PMT\\_RATIOMR2$ to $PMT\\_RATIOMR5$", 
          # "$PMT\\_RATIOMR4$",
          # "$PMT\\_RATIOMR3$", 
          # "$PMT\\_RATIOMR2$", 
@@ -370,7 +369,7 @@ EngFeats <- data.frame(
 )
 
 knitr::kable(EngFeats,"latex", escape = F,booktabs = T,caption = "Engineered features") %>% 
-  kable_styling(full_width = F,font_size = 7) %>% 
+  kable_styling(full_width = F,font_size = 7,latex_options = "hold_position") %>% 
   landscape()
 
 ```
@@ -395,7 +394,7 @@ creditdata %<>%
 
 ```
 
-2. Utilization of Credit limit
+
 
 ```{r,eval=T}
 library(matrixStats)
@@ -411,20 +410,7 @@ creditdata %<>%
          UTIL_6 = ifelse(BILL_AMT6/LIMIT_BAL < 0 , 0 , BILL_AMT6/LIMIT_BAL))
 ```
 
-```{r, eval = F}
-# notice the utilization of the population is increasing over time?
-# creditdata %>% select(starts_with("UTIL")) %>% skimr::skim()
 
-# balance increasing?
-# creditdata %>% select(starts_with("PAY_RAT")) %>% skimr::skim()
-
-# creditdata %>% select(starts_with("BILL_AMT")) %>% skimr::skim()
-
-```
-
-3. Average Bill and Payment amounts
-
-4. Velocity of Bill amount increase, payment amount decrease, utilization increase, pay ratio decrease.
 
 ```{r,eval=T}
 #--------------------------------------------------------------------------------------------------------------
@@ -496,30 +482,19 @@ creditdata %<>%
   mutate(payRatioFlag = ifelse(ID %in% payRatioIDs$ID,1,0))
 
 
-table(creditdata$DEFAULT,creditdata$utilFlag)
 
-chisq.test(table(creditdata$DEFAULT,creditdata$utilFlag))
-
-
-table(creditdata$DEFAULT,creditdata$balFlag)
-
-chisq.test(table(creditdata$DEFAULT,creditdata$balFlag))
-
-table(creditdata$DEFAULT,creditdata$payFlag)
-
-chisq.test(table(creditdata$DEFAULT,creditdata$payFlag))
 
 
 ## Get percentage increase between month 6 and month 1
 
 creditdata %<>%
-  mutate(PerBALinc = (BILL_AMT6 - BILL_AMT1)/BILL_AMT6,
-         PerUTILinc = (UTIL_6 - UTIL_1)/UTIL_6
+  mutate(PerBALinc = ifelse(!is.infinite((BILL_AMT6 - BILL_AMT1)/BILL_AMT6),(BILL_AMT6 - BILL_AMT1)/BILL_AMT6,(BILL_AMT6 - BILL_AMT1)/0.01),
+         PerUTILinc = ifelse(!is.infinite((UTIL_6 - UTIL_1)/UTIL_6),(UTIL_6 - UTIL_1)/UTIL_6,(UTIL_6 - UTIL_1)/0.0001)
          )
 
 ```
 
-5. Max Bill and Payments 
+
 
 ```{r,eval=T}
 creditdata %<>% 
@@ -549,9 +524,9 @@ creditdata %<>%
 
   
 ```
-6. Age Bucketing
 
-```{r,eval=T}
+
+```{r AGEppkBinning,eval=T,fig.cap="WOE binning",fig.height=4}
 # creditdata %<>% 
 #   mutate(AgeBins = cut(AGE,breaks = seq(from = 25, to = 80,by = 5)))
 #   
@@ -559,9 +534,9 @@ creditdata %<>%
 # 
 # Information::plot_infotables(tst7,"AGE")
 
-Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 6) -> tst6
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 6) -> tst6
 
-Information::plot_infotables(tst6,"AGE")
+Information::plot_infotables(tst6,"AGE") + coord_flip()->p1
 
 
 # Information::create_infotables(data = creditdata %>% select(AGE, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) -> tst5
@@ -572,14 +547,16 @@ Information::plot_infotables(tst6,"AGE")
 # 
 # Information::plot_infotables(tst4,"AGE")
 
-Information::create_infotables(data = creditdata %>% select(ppk, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) -> tst5ppk
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(ppk, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) -> tst5ppk
 
-Information::plot_infotables(tst5ppk,"ppk")
+Information::plot_infotables(tst5ppk,"ppk") + coord_flip()->p2
+
+gridExtra::grid.arrange(p1,p2,ncol=2,top = grid::textGrob("WOE binning"))
 
 ```
 
 
-```{r,eval=T}
+```{r,eval=F}
 library(OneR)
 
 OneR::optbin(as.factor(DEFAULT) ~ AGE, data = creditdata, method = "infogain")-> optbin
@@ -590,7 +567,7 @@ plot(optbin)
 
 
 ```{r,eval=T}
-tst6$Tables$AGE$AGE
+
 
 creditdata %<>% 
   mutate(AGE_21_25 = ifelse(AGE>=21 & AGE<=25,1,0),
@@ -608,7 +585,38 @@ creditdata %<>%
 ```
 
 ##
-## Feature Selection
+
+```{r,eval=F}
+table(creditdata$DEFAULT,creditdata$utilFlag)
+
+chisq.test(table(creditdata$DEFAULT,creditdata$utilFlag))
+
+
+table(creditdata$DEFAULT,creditdata$balFlag)
+
+chisq.test(table(creditdata$DEFAULT,creditdata$balFlag))
+
+table(creditdata$DEFAULT,creditdata$payFlag)
+
+chisq.test(table(creditdata$DEFAULT,creditdata$payFlag))
+```
+
+## 4.1 Data Quality of Engineered Features
+
+The use of very small values like a penny when denominator dollar amounts are 0 prevented the feature from going to an infinite value.Table 6 Shows the summary of the engineered features. Every feature is as expected.
+
+```{r}
+
+EngFeatNames <- creditdata %>% select(matches("RATIO|Avg|UTIL|MR|6mo|Flag|Max|Age_|ppk|inc")) %>% colnames()
+
+creditdata %>% 
+  select(!!EngFeatNames) %>% 
+  skimr::skim_to_wide() %>% 
+  select(-type,-sd,-mean) %>% 
+  kable("latex",digits = 2,booktabs = T,caption = "Engineering features summary",longtable = T) %>% 
+  kable_styling(latex_options = "repeat_header")
+```
+
 
 
 
@@ -653,6 +661,4 @@ plot(varImp(rfFit))
 
 #skimr::skim(x)
 ```
-
-
 
