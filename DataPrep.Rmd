@@ -14,11 +14,13 @@ knitr::opts_chunk$set(echo = F)
 
 # 1. Introduction
 
+
+
 # 2. Executive Summary
 
 # 3. Data
 
-Table 1 shows the dictionary of the data that is available. 
+Data are availble for 30,000 customers spanning between April 2005 and September 2005. The description of the data are shown in Table 1 below. Table 2 and Table 3 show the general summary of the data. Upon inspection of the data summaries, there were data quality issues identified, that are discussed in the following section.
 
 ```{r, warning = F, message = F}
 library(tidyverse)
@@ -118,6 +120,7 @@ kable(Dict,format = "latex",align = "c",caption = "Data Dictionary") %>%
 skimr::skim_with(numeric = list(hist = NULL),integer = list(hist = NULL))
 skimr::skim_to_wide(creditdata) %>% 
   filter(type == "factor") %>% 
+  filter(!variable %in% "data.group") %>% 
   select(variable,missing,complete,n,n_unique,top_counts) %>% 
   #mutate(top_counts = cell_spec(top_counts,"latex",align = "r")) %>% 
   kable(format = "latex",digits = 1,booktabs = T,caption = "categorical variables summary") %>% 
@@ -134,19 +137,23 @@ skimr::skim_to_wide(creditdata) %>%
 
 ## 3.1 Data Issues
 
-1. Unexpected categories in Education and Marriage. Data was inspected to potentially make a correction to the mislabeled values, no particular pattern for the mislabels emerged. Therefore the unexpected levles for EDUCATION and MARRIAGE would be mapped to "9-unknown"
-2. There are negative bill amounts; they are assumed to be overpayment of credits incurred.
-3. PAY_0 is assumed to be PAY_1
-4. Repayment status has values that include -2 and 0. They are assumed to be non-delayed payments. 
+1. Table 2 shows the variable $EDUCATION$ to have 7 possible values, while the dictionary in table 1 shows us expect 4 possible values. The values 0,5 and 6 would be assigned to a category "unknown", coded as 9.
 
-```{r,eval=F}
+2. Similary for 54 customers, the value of $MARRIAGE$ is entered as 0. The 0 values are assumed to be "unknown" marital status.
+
+3. The variable $PAY/_0$ is assumed to be the repayment status as of September 2005.
+
+4. Repayment status has values that include -2 and 0. Approximately 26,000 customers have repayment status that is not described in the dictionary. It is very likely that the data dictionary had an omission in describing -2 and 0. Thefore they are assumed to be non-delayed payments.
+
+
+```{r,eval=T}
 lattice::barchart(~table(EDUCATION), creditdata, ylab = "Education", xlab = "Frequency")
-lattice::bwplot(~LIMIT_BAL|EDUCATION,creditdata)
+
 ```
 
 ## 3.2 Data Splitting
 
-The data was seperated into three groups for model training, validation and testing purposes. The number of customers in each of these groups are shown below.
+The data was seperated into three groups for model training, validation and testing purposes. The number of customers in each of these groups are shown below in table 4.
 
 ```{r,eval=T}
 creditdata %>% 
@@ -201,9 +208,9 @@ EngFeats <- data.frame(
     "Max bill",
     "Max payment",
     "Max delinquency",
-    "Age of customers between mentioned range"
-    # "Ppk - Dist to credit limit in units of 3 std.dev of Bill",
-    #"Ppk discretized with WOE values"
+    "Age of customers between mentioned range",
+     "Ppk -Dist to credit limit in units of 3 std.dev of Bill",
+    "Ppk discretized with WOE values"
     
     
   ),
@@ -216,7 +223,7 @@ EngFeats <- data.frame(
     
     "$Avg\\_PMT\\_RATIO$",
     
-    "$UTIL\\_1$",
+    "$UTIL\\_1$ - $UTIL\\_6$ ",
     # "$UTIL\\_2$",
     # "$UTIL\\_3$",
     # "$UTIL\\_4$",
@@ -272,11 +279,11 @@ EngFeats <- data.frame(
     
     "$Max\\_Dlq$",
     
-    "$Age\\_21\\_25$"
+    "$Age\\_21\\_25$",
     
-    # "$ppk$",
+    "$ppk$",
     
-   # "$ppkwoe$"
+    "$ppkwoe$"
     
     
     
@@ -302,9 +309,9 @@ EngFeats <- data.frame(
                   # '$UTIL\\_2 - UTIL\\_3$',
                   # '$UTIL\\_1 - UTIL\\_2$',
                   
-                  'mean(UTIL1,UTIL2,UTIL3,UTIL4,UTIL6)',
+                  '$\\frac{\\sum_{mnth=1}^{6}UTIL_{mnth}}{5}$',
                   
-                  'mean(BILL\\_AMT1,BILL\\_AMT2,BILL\\_AMT3,BILL\\_AMT4,BILL\\_AMT6)',
+                  '$\\frac{\\sum_{mnth=1}^{6}BILL\\_AMT_{mnth}}{5}$',
                   
                   '$BILL\\_AMT5 - BILL\\_AMT6$',
                   # '$BILL\\_AMT4 - BILL\\_AMT5$',
@@ -312,7 +319,8 @@ EngFeats <- data.frame(
                   # '$BILL\\_AMT2 - BILL\\_AMT3$',
                   # '$BILL\\_AMT1 - BILL\\_AMT2$',
                   
-                  '$mean(PAY\\_AMT1,PAY\\_AMT2,PAY\\_AMT3,PAY\\_AMT4,PAY\\_AMT6)$',
+                  '$\\frac{\\sum_{mnth=1}^{6}PAY\\_AMT_{mnth}}{5}$',
+                  
                   
                   
                   '$PAY\\_AMT5 - PAY\\_AMT6$',
@@ -338,17 +346,17 @@ EngFeats <- data.frame(
                   
                   "$\\forall{PMT\\_RATIOMR5,PMT\\_RATIOMR4,PMT\\_RATIOMR3,PMT\\_RATIOMR2} > 0$",
                   
-                  '$max(BILL\\_AMT1,BILL\\_AMT2,BILL\\_AMT3,BILL\\_AMT4,BILL\\_AMT6)$',
+                  '$max(BILL\\_AMT1,BILL\\_AMT2,BILL\\_AMT3,BILL\\_AMT4,BILL\\_AMT5,BILL\\_AMT6)$',
                   
-                  '$max(PAY\\_AMT1,PAY\\_AMT2,PAY\\_AMT3,PAY\\_AMT4,PAY\\_AMT6)$',
+                  '$max(PAY\\_AMT1,PAY\\_AMT2,PAY\\_AMT3,PAY\\_AMT4,PAY\\_AMT5,PAY\\_AMT6)$',
                   
                   '$max(PAY\\_1,PAY\\_2,PAY\\_3,PAY\\_4,PAY\\_5,PAY\\_6)$',
                   
-                  '$if AGE>=21 AND AGE<=25 then 1 else 0$'
+                  '$if AGE>=21 AND AGE<=25 then 1 else 0$',
                   
-              # '$\\frac{(LIMIT\\_BAL - \\overline{BILL\\_AMT_{mth}})}{\\sqrt{\\sum_{mth=1}^6\\frac{(BILL\\_AMT_{mth} - \\overline{BILL\\_AMT_{mth}})^2}{5}}}$',
+              '$\\frac{(LIMIT\\_BAL - \\overline{BILL\\_AMT_{mth}})}{\\sqrt{\\sum_{mth=1}^6\\frac{(BILL\\_AMT_{mth} - \\overline{BILL\\_AMT_{mth}})^2}{5}}}$',
                   
-                 # '$ppk binned & replaced by WOE$'
+                  'ppk binned and replaced by WOE'
                   
                   
                   
@@ -361,9 +369,9 @@ EngFeats <- data.frame(
 
 )
 
-knitr::kable(EngFeats,"latex", escape = F,booktabs = T) %>% 
+knitr::kable(EngFeats,"latex", escape = F,booktabs = T,caption = "Engineered features") %>% 
   kable_styling(full_width = F,font_size = 7) %>% 
-  column_spec(3,width = "15em")
+  landscape()
 
 ```
 
