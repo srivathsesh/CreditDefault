@@ -2,10 +2,13 @@
 title: "Credit Default Prediction"
 author: "Sri Seshadri"
 date: "9/28/2019"
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
 output:
-  pdf_document: default
-  word_document: default
-  html_document: default
+    pdf_document
+ 
 ---
 
 ```{r setup, include=FALSE,warning=F,message=F}
@@ -620,7 +623,7 @@ creditdata %>%
   kable_styling(latex_options = "repeat_header",font_size = 7)
 ```
 
-## 5. Exploratory Data Analysis.
+## 5. Exploratory Data Analysis (EDA).
 
 In this section the training data are analyzed to explore potential relationships between the predictor and propensity of default. Table 7 shows the distribution of the defaulting customers among the 15180 customers.
 
@@ -652,7 +655,7 @@ print(mp)
 
 ### 5.2 Past Delinquencies in payment
 
-Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late yields higher odds of defaulting. The weights of evidence plot on total & maximum delinquencies potentialy indicates that the bank pardon's a single late payment.
+Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late associates to increased odds of defaulting (thicker tails in the density plot). The weights of evidence plot on total & maximum delinquencies shows increased chances of defaulting when total delinquency is past 1 month. This potentialy indicates that the bank pardon's a single late payment.
 
 ```{r,fig.cap="Effect of Delinqucies"}
 train %>% 
@@ -722,9 +725,27 @@ chisq.test(balflagtbl) %>% pander()
 
 Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistiscally significant results. The results are not produced in this report for brevity.
 
+## 5.6 Effect of Age
+
+Figure 1 in section 4 shows relatively higher chances of defaulting in the early ages (21-24) and in the age group past mid-life 45 years and above. The increased chances in default past mid-life may be potentially attributed to loss in employment and or health related events in life.
+
+## 5.7 Model based EDA
+
+In this section, two methods are employed to gain more insights on the effects of the predictor variables on chances of default. 
+
+- Tree based methods.
+- Simple logistic regression.
 
 
-```{r, eval = F}
+### 5.7.1 Tree based methods.
+
+Multivariate decision tree method, where a tree is grown using all predictor variables in the model. Here a generalizable tree is obtained by using two different methods of pruning a) Using a cost complexity parameter on the leaves b) Depth of the tree. Decision trees are fit on 10 fold crossvalidated samples to arrive at a generalizable decision tree. 
+
+#### 5.7.1.1 Decision tree with complexity parameter tuning
+
+The best tuning for cost parameter based on 10 fold cross validation was 0.015. Figure 5 shows the tuning and the importance of the various predictors. It is to be noted that count of delinquencies (DLQ_Count) and maximum delinquencies (DLQ_Max) were removed from the predictors list for the model shown below. When included in the model, all the trees zero in on DLQ_Total, DLQ_Count and DLQ_Max leaving very little signal from other predictors to come out. 
+
+```{r, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot"}
 
 library(doParallel)
 cl <- makePSOCKcluster(5)
@@ -733,7 +754,8 @@ registerDoParallel(cl)
 ctrl <- trainControl(method = "cv",
                      summaryFunction = twoClassSummary,
                      classProbs = TRUE)
-x = train %>% select(-DEFAULT)
+
+x = train %>% select(-DEFAULT,-DLQ_Count,-DLQ_Max)
 y = as.factor(train$DEFAULT)
 levels(y) <- c("no","yes")
 rpartFit <- caret::train(x = x, 
@@ -741,9 +763,39 @@ rpartFit <- caret::train(x = x,
                   method = "rpart",
                   tuneLength = 10,
                   metric = "ROC",
-                  trControl = ctrl)
+                  trControl = ctrl
+                  )
+stopCluster(cl)
 
-plot(rpartFit)
+
+gridExtra::grid.arrange(plot(rpartFit),plot(varImp(rpartFit),tl.cex = 5),ncol = 2)
+```
+
+
+\newpage
+\blandscape
+
+```{r, fig.cap="Decision tree based on cost parameter tuning"}
+partykit::as.party(rpartFit$finalModel) -> prty
+library(partykit)
+plot(prty,gp = gpar(fontsize = 6),
+     inner_panel = node_inner,
+     ip_args = list(
+       abbreviate = F,
+       id = F
+     ),
+     tp_args = list(
+       id = F
+     ))
+```
+
+\elandscape
+\newpage
+
+
+
+
+```{r}
 
 rpartFit2 <- caret::train(x = x, 
                   y = y,
@@ -816,7 +868,21 @@ stopCluster(cl)
 #skimr::skim(x)
 ```
 
+\newpage
+\blandscape
+
 ```{r}
-plot(partykit::as.party(rpartFit_1$finalModel))
+partykit::as.party(rpartFit2_1$finalModel) -> prty
+library(partykit)
+plot(prty,gp = gpar(fontsize = 6),
+     inner_panel = node_inner,
+     ip_args = list(
+       abbreviate = F,
+       id = F
+     ),
+     tp_args = list(
+       id = F
+     ))
 ```
 
+\elandscape

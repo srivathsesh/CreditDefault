@@ -63,3 +63,16 @@ train %>% ggplot(aes(x=ppkwoe,group = DEFAULT, col = DEFAULT, fill = DEFAULT )) 
 #--------------------------------
 #    4. Balances
 #--------------------------------
+
+train %>% ggplot(aes(x=Bal_Growth_6mo,group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw()
+
+table(train$DEFAULT,train$balFlag) -> balflagtbl
+chisq.test(balflagtbl)
+
+
+train %>% ggplot(aes(x=Max_Pmt_Amt,group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw()
+
+
+table(train$DEFAULT,train$payFlag) -> payflagtbl
+chisq.test(payflagtbl)
+
