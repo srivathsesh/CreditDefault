@@ -725,17 +725,18 @@ Payments as a ratio of bill amounts, average payment amounts, continuous decreas
 
 
 ```{r, eval = F}
-creditdata %>% 
-  filter(train == 1) %>% 
-  select(-train,-test,-validate,-u,-data.group,-ID) -> trainData
+
+library(doParallel)
+cl <- makePSOCKcluster(5)
+registerDoParallel(cl)
 
 ctrl <- trainControl(method = "cv",
                      summaryFunction = twoClassSummary,
                      classProbs = TRUE)
-x = trainData %>% select(-DEFAULT)
-y = as.factor(creditdata$DEFAULT[creditdata$train==1])
+x = train %>% select(-DEFAULT)
+y = as.factor(train$DEFAULT)
 levels(y) <- c("no","yes")
-rpartFit <- train(x = x, 
+rpartFit <- caret::train(x = x, 
                   y = y,
                   method = "rpart",
                   tuneLength = 10,
@@ -744,25 +745,78 @@ rpartFit <- train(x = x,
 
 plot(rpartFit)
 
-
-
-library(doParallel)
-cl <- makePSOCKcluster(5)
-registerDoParallel(cl)
-
-rfFit <- train(x = x %>% select(-ppk,-PerBALinc,-PerUTILinc) %>% as.matrix(), 
+rpartFit2 <- caret::train(x = x, 
                   y = y,
-                  method = "rf",
+                  method = "rpart2",
                   tuneLength = 10,
                   metric = "ROC",
-                  trControl = ctrl,
-                  )
+                  trControl = ctrl)
+
+
+plot(rpartFit2)
+
 
 stopCluster(cl)
 
-plot(rfFit)
-plot(varImp(rfFit))
+plot(varImp(rpartFit))
+
+plot(varImp(rpartFit2))
+
+
+cl <- makePSOCKcluster(5)
+registerDoParallel(cl)
+
+ctrl <- trainControl(method = "cv",
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+x = train %>% select(-DEFAULT,-DLQ_Count,-DLQ_Max)
+y = as.factor(train$DEFAULT)
+levels(y) <- c("no","yes")
+rpartFit_1 <- caret::train(x = x, 
+                  y = y,
+                  method = "rpart",
+                  tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl)
+
+plot(rpartFit_1)
+
+rpartFit2_1 <- caret::train(x = x, 
+                  y = y,
+                  method = "rpart2",
+                  tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl)
+
+
+plot(rpartFit2_1)
+
+plot(varImp(rpartFit_1))
+
+plot(varImp(rpartFit2_1))
+stopCluster(cl)
+
+# library(doParallel)
+# cl <- makePSOCKcluster(5)
+# registerDoParallel(cl)
+# 
+# rfFit <- train(x = x %>% select(-ppk,-PerBALinc,-PerUTILinc) %>% as.matrix(), 
+#                   y = y,
+#                   method = "rf",
+#                   tuneLength = 10,
+#                   metric = "ROC",
+#                   trControl = ctrl,
+#                   )
+# 
+# stopCluster(cl)
+# 
+# plot(rfFit)
+# plot(varImp(rfFit))
 
 #skimr::skim(x)
+```
+
+```{r}
+plot(partykit::as.party(rpartFit_1$finalModel))
 ```
 
