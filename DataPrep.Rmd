@@ -145,6 +145,8 @@ skimr::skim_to_wide(creditdata) %>%
 
 4. Repayment status has values that include -2 and 0. Approximately 26,000 customers have repayment status that is not described in the dictionary. It is very likely that the data dictionary had an omission in describing -2 and 0. Thefore they are assumed to be non-delayed payments.
 
+5. There are 543 customers in the data who are marked delinquent when the average bill over 6 months is 0. It is not clear if the customers defaulted in the months prior to the 6 months of data that is provided.
+
 
 ```{r,eval=T}
 
@@ -488,8 +490,8 @@ creditdata %<>%
 ## Get percentage increase between month 6 and month 1
 
 creditdata %<>%
-  mutate(PerBALinc = ifelse(!is.infinite((BILL_AMT6 - BILL_AMT1)/BILL_AMT6),(BILL_AMT6 - BILL_AMT1)/BILL_AMT6,(BILL_AMT6 - BILL_AMT1)/0.01),
-         PerUTILinc = ifelse(!is.infinite((UTIL_6 - UTIL_1)/UTIL_6),(UTIL_6 - UTIL_1)/UTIL_6,(UTIL_6 - UTIL_1)/0.0001)
+  mutate(PerBALinc = ifelse(!is.infinite((BILL_AMT1 - BILL_AMT6)/BILL_AMT6)&!is.na((BILL_AMT1 - BILL_AMT6)/BILL_AMT6),(BILL_AMT1 - BILL_AMT6)/BILL_AMT6,(BILL_AMT1 - BILL_AMT6)/0.01),
+         PerUTILinc = ifelse(!is.infinite((UTIL_1 - UTIL_6)/UTIL_6)&!is.na((UTIL_6 - UTIL_1)/UTIL_6),(UTIL_1- UTIL_6)/UTIL_6,(UTIL_1 - UTIL_6)/0.0001)
          )
 
 ```
@@ -506,15 +508,15 @@ creditdata %<>%
 ```{r,eval=T}
 
 # Customers delinquent often
-creditdata %<>%
-  mutate(Max_Dlq = ifelse(rowMaxs(select(.,matches("PAY_[0-9]")) %>% as.matrix()) < 0,0,rowMaxs(select(.,matches("PAY_[0-9]")) %>% as.matrix()) ))
+# creditdata %<>%
+#   mutate(Max_Dlq = ifelse(rowMaxs(select(.,matches("PAY_[0-9]")) %>% as.matrix()) < 0,0,rowMaxs(select(.,matches("PAY_[0-9]")) %>% as.matrix()) ))
 
 creditdata %>% 
   select(ID,matches("PAY_[0-9]")) %>% 
   gather(key = "Period", value = "DLQ",-ID) %>% 
   mutate(DLQ = ifelse(DLQ < 0, 0,DLQ)) %>% 
   group_by(ID) %>% 
-  summarise(DLQs = count(DLQ > 0),
+  summarise(DLQ_Count = count(DLQ > 0),
             DLQ_Total = sum(DLQ),
             DLQ_Max = max(DLQ)) -> Delequencies
 
@@ -584,7 +586,6 @@ creditdata %<>%
 
 ```
 
-##
 
 ```{r,eval=F}
 table(creditdata$DEFAULT,creditdata$utilFlag)
@@ -603,20 +604,123 @@ chisq.test(table(creditdata$DEFAULT,creditdata$payFlag))
 
 ## 4.1 Data Quality of Engineered Features
 
-The use of very small values like a penny when denominator dollar amounts are 0 prevented the feature from going to an infinite value.Table 6 Shows the summary of the engineered features. Every feature is as expected.
+The use of very small values like a penny when denominator dollar amounts are 0 prevented the feature from going to an infinite value.Table 6 Shows the summary of the engineered features.
+
 
 ```{r}
 
-EngFeatNames <- creditdata %>% select(matches("RATIO|Avg|UTIL|MR|6mo|Flag|Max|Age_|ppk|inc")) %>% colnames()
+EngFeatNames <- creditdata %>% select(matches("RATIO|Avg|UTIL|MR|6mo|Flag|Max|Age_|ppk|inc|DLQ|stdB")) %>% colnames()
+SelectedFeat <- EngFeatNames[!str_detect(EngFeatNames,"[A-Z][0-9]|UTIL_[0-9]")]
 
 creditdata %>% 
   select(!!EngFeatNames) %>% 
   skimr::skim_to_wide() %>% 
   select(-type,-sd,-mean) %>% 
   kable("latex",digits = 2,booktabs = T,caption = "Engineering features summary",longtable = T) %>% 
-  kable_styling(latex_options = "repeat_header")
+  kable_styling(latex_options = "repeat_header",font_size = 7)
 ```
 
+## 5. Exploratory Data Analysis.
+
+In this section the training data are analyzed to explore potential relationships between the predictor and propensity of default. Table 7 shows the distribution of the defaulting customers among the 15180 customers.
+
+```{r train}
+train <- creditdata %>% filter(train == 1) %>% select(!!SelectedFeat,DEFAULT)
+data.frame(prop.table(table(train$DEFAULT))) %>% 
+  rename("DEFAULT" = Var1) %>% 
+  kable("latex", booktabs = T, digits = 2,caption = "Distribution of Defaulting customers in training data") %>% 
+  kable_styling(latex_options = "hold_position")
+```
+
+### 5.1 Magnitude of revolving credit
+
+It is hypothesized that the magnitude of revolving credit is a reflection of income of customers and income has an effect on credit card default. There is no evidence of magnitude of revolving credit or income having an influence on default. In instances where either the payment or the bill amount were $<=0$ the value was assumed to be one-tenth of a New Taiwan(NT) penny. Figure 2 shows the log of the amounts for easier visulaization. 
+
+```{r,fig.cap="Effect of revolving credit on default"}
+train %>% 
+  ggplot(aes(x=log(ifelse(Avg_BILL_Amt<=0,0.001,Avg_BILL_Amt)),y=log(ifelse(Avg_PMT_Amt<=0,0.001,Avg_PMT_Amt)),col = DEFAULT)) + 
+  xlab("log(Avg Bill Amount)") +
+  ylab("log(Avg Payment Amount)")+
+  geom_point(alpha = 0.4) + 
+  theme_bw() -> scp
+
+ggExtra::ggMarginal(scp,type = "histogram",groupColour = T) -> mp
+
+print(mp)
+
+```
+
+### 5.2 Past Delinquencies in payment
+
+Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late yields higher odds of defaulting. The weights of evidence plot on total & maximum delinquencies potentialy indicates that the bank pardon's a single late payment.
+
+```{r,fig.cap="Effect of Delinqucies"}
+train %>% 
+  mutate(flag = as.factor(ifelse(Avg_BILL_Amt==0|Avg_PMT_Amt==0,1,0))) %>% 
+  ggplot(aes(x=as.numeric(DLQ_Count),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("Frequency of Delinquency (DLQ_Count)") ->p1
+
+
+train %>%
+  mutate(flag = as.factor(ifelse(Avg_BILL_Amt==0|Avg_PMT_Amt==0,"Bill = 0","Bill > 0"))) %>%
+  ggplot(aes(x=DLQ_Total,group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("Total months late (DLQ_Total)") ->p2
+
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(DLQ_Total, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) ->dlqbin
+
+Information::plot_infotables(dlqbin,"DLQ_Total") + coord_flip() + theme_bw() + ggtitle("") + ylab("DLQ_Total WOE") -> p3
+
+train %>%
+  mutate(flag = as.factor(ifelse(Avg_BILL_Amt==0|Avg_PMT_Amt==0,"Bill = 0","Bill > 0"))) %>%
+  ggplot(aes(x=DLQ_Max,group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("Max months late (DLQ_Max)") ->p4
+
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(DLQ_Max, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) ->dlqbin
+
+Information::plot_infotables(dlqbin,"DLQ_Max") + coord_flip() + theme_bw() + ggtitle("") + ylab("DLQ_Max WOE") -> p5
+
+gridExtra::grid.arrange(p1,p2,p3,p5, ncol = 2)
+
+```
+
+## 5.3 Utilization of credit limit
+
+A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 4, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is surprising that there are is a increase in the odds for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of the plot below. It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization, 
+
+```{r,fig.cap="Utilization of credit limit's effect on Default"}
+train %>% ggplot(aes(x=log(ifelse(ppk <=0, 0.0000001,ppk)),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("log(ppk)")-> u1
+creditdata %>% filter(train==1) %>%  ggplot(aes(x=AGE, y = log(ifelse(ppk <=0, 0.0000001,ppk)), col = DEFAULT)) + geom_point(alpha = 0.4) + theme_bw() + ylab("log(ppk)")-> u2
+train %>% ggplot(aes(y=Avg_UTIL,x = DEFAULT,col = DEFAULT)) + geom_boxplot() + theme_bw()-> u3
+#gridExtra::tableGrob(broom::glance(chisq.test(utilflagtbl))) -> u4
+gridExtra::grid.arrange(u1,u2,u3,ncol = 2)
+```
+
+The customers who have  continuous growth in utilization over 6 months is flaged and analyzed. The chi-squared test of indenpendence shows there is a statistical difference. 
+
+
+```{r}
+table(train$DEFAULT,train$utilFlag) -> utilflagtbl
+prop.table(utilflagtbl) %>% 
+  data.frame() %>% rename("utilFlag" = Var1, "DEFAULT" = Var2) %>% 
+  kable("latex", booktabs = T,caption = "Continous growth in utilization's effect on DEFAULT - ChiSq test") %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+chisq.test(utilflagtbl) %>% pander()
+
+```
+
+## 5.4 Effect of balances
+
+The effect of increased balances is quantified in the table below. The customers whose balances increases over time (month after month) are flaged and analyzed for the odds in default. The chi squared test of independence show there is a statistical significance due to increasing credit card balance over time. 
+
+```{r}
+table(train$DEFAULT,train$balFlag) -> balflagtbl
+prop.table(balflagtbl) %>% 
+  data.frame() %>% rename("balFlag" = Var1, "DEFAULT" = Var2) %>% 
+  kable("latex", booktabs = T,caption = "Continous growth in balance's effect on DEFAULT - ChiSq test") %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+chisq.test(balflagtbl) %>% pander()
+```
+
+## 5.5 Effect of decreased payments
+
+Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistiscally significant results. The results are not produced in this report for brevity.
 
 
 
