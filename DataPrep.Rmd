@@ -11,8 +11,8 @@ output:
  
 ---
 
-```{r setup, include=FALSE,warning=F,message=F}
-knitr::opts_chunk$set(echo = F)
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,warning=F,message=F)
 ```
 
 # 1. Introduction
@@ -175,7 +175,9 @@ The data was seperated into three groups for model training, validation and test
 creditdata %>% 
   mutate(data.group = ifelse(data.group == 1, "Train", ifelse(data.group == 2, "Test", "Validate"))) %>% 
   group_by(data.group) %>% 
-  summarise(datapoints = n()) %>% knitr::kable(caption = "Train,Validation and Test splits",format = "latex",booktabs = T) %>%   kable_styling(latex_options = c("striped","hold_position"))
+  summarise(datapoints = n()) %>% 
+  knitr::kable(caption = "Train,Validation and Test splits",format = "latex",booktabs = T) %>% 
+  kable_styling(latex_options = c("striped","hold_position"))
 
 
 ```
@@ -190,195 +192,198 @@ It is interesting to note that the WOE indicates that the customers in higher ag
 ppk values were binned and replaced with their respective WOE. Figure 1 shows the binning of these variables.
 
 
+\newpage
+\blandscape
+
 ```{r,eval=T}
-EngFeats <- data.frame(
-  Feature = c(
-    "Payment to Bill ratio",
-    "Average Payment to Bill ratio",
-    "Proportion of credit used in the month",
-    " Month's in/decrease in credit use",
-    "Average proportion of credit used",
-    "Average Montly bill",
-    "Month's in/decrease in bill",
-    "Average amount paid",
-    "Month's in/decrease in payment",
-    "Balance growth over 6 months",
-    "Credit utilization growth 6 months",
-    "Month's in/decrease in Payment ratio",
-    "Customer with increased utilization over time",
-    "Customer with increased bill over time",
-    "Customer with reduced payments time",
-    "Customer with reduced payment/bill over time",
-    "Max bill",
-    "Max payment",
-    "Max delinquency",
-    "Age of customers between mentioned range",
-     "Ppk -Dist to credit limit in units of 3 std.dev of Bill",
-    "Ppk discretized with WOE values"
-    
-    
-  ),
-  `Example Column` = c(
-    "$PMT\\_RATIO2$",
-    # "$PMT\\_RATIO3$",
-    # "$PMT\\_RATIO4$",
-    # "$PMT\\_RATIO5$",
-    # "$PMT\\_RATIO6$",
-    
-    "$Avg\\_PMT\\_RATIO$",
-    
-    "$UTIL\\_1$ to $UTIL\\_6$ ",
-    # "$UTIL\\_2$",
-    # "$UTIL\\_3$",
-    # "$UTIL\\_4$",
-    # "$UTIL\\_5$",
-    # "$UTIL\\_6$",
-    
-    "$UTILMR1$ to $UTILMR5$",
-    # "$UTILMR4$",
-    # "$UTILMR3$",
-    # "$UTILMR2$",
-    # "$UTILMR1$",
-  
-   
-    "$Avg\\_UTIL$",
-    
-    "$Avg\\_BILL\\_Amt$",
-    
-     "$BILLAMTMR1$ to $BILLAMTMR5$ ", 
-     # "$BILLAMTMR4$",
-     # "$BILLAMTMR3$",
-     # "$BILLAMTMR2$",
-     # "$BILLAMTMR1$",
-    
-     "$Avg\\_PMT\\_Amt$",
-    
-      "$PAYMR1$ to $PAYMR5$",
-      # "$PAYMR4$",
-      # "$PAYMR3$",
-      # "$PAYMR2$",
-      # "$PAYMR1$",
-    
-    "$Bal\\_Growth\\_6mo$", 
-    
-    "$UTIL\\_Growth\\_6mo$", 
-    
-         "$PMT\\_RATIOMR2$ to $PMT\\_RATIOMR5$", 
-         # "$PMT\\_RATIOMR4$",
-         # "$PMT\\_RATIOMR3$", 
-         # "$PMT\\_RATIOMR2$", 
-    
-    "$UtilFlag$",
-    
-    '$balFlag$',
-    
-    "$payFlag$",
-    
-    
-    "$payRatioFlag$",
-    
-    "$Max\\_Bill\\_Amt$",
-    
-    "$Max\\_Pmt\\_Amt$",
-    
-    "$Max\\_Dlq$",
-    
-    "$Age\\_21\\_25$",
-    
-    "$ppk$",
-    
-    "$ppkwoe$"
-    
-    
-    
-  ),
-  Calculation = c(' $\\frac{PAY\\_AMT1}{BILL\\_AMT2}$',
-                  # ' $\\frac{PAY\\_AMT2}{BILL\\_AMT3}$',
-                  # ' $\\frac{PAY\\_AMT3}{BILL\\_AMT4}$',
-                  # ' $\\frac{PAY\\_AMT4}{BILL\\_AMT5}$',
-                  # ' $\\frac{PAY\\_AMT5}{BILL\\_AMT6}$',
-  
-                  ' $\\frac{\\sum_{Month=1}^{5}PAY\\_AMT_{Month}}{\\sum_{Month=2}^{6}BILL\\_AMT_{Month}}$',
-                  
-                  ' $\\frac{BILL\\_AMT1}{LIMIT\\_BAL}$',
-                  # ' $\\frac{BILL\\_AMT2}{LIMIT\\_BAL}$',
-                  # ' $\\frac{BILL\\_AMT3}{LIMIT\\_BAL}$',
-                  # ' $\\frac{BILL\\_AMT4}{LIMIT\\_BAL}$',
-                  # ' $\\frac{BILL\\_AMT5}{LIMIT\\_BAL}$',
-                  # ' $\\frac{BILL\\_AMT6}{LIMIT\\_BAL}$',
-                  
-                  '$UTIL\\_5 - UTIL\\_6$',
-                  # '$UTIL\\_4 - UTIL\\_5$',
-                  # '$UTIL\\_3 - UTIL\\_4$',
-                  # '$UTIL\\_2 - UTIL\\_3$',
-                  # '$UTIL\\_1 - UTIL\\_2$',
-                  
-                  '$\\frac{\\sum_{mnth=1}^{6}UTIL_{mnth}}{5}$',
-                  
-                  '$\\frac{\\sum_{mnth=1}^{6}BILL\\_AMT_{mnth}}{5}$',
-                  
-                  '$BILL\\_AMT5 - BILL\\_AMT6$',
-                  # '$BILL\\_AMT4 - BILL\\_AMT5$',
-                  # '$BILL\\_AMT3 - BILL\\_AMT4$',
-                  # '$BILL\\_AMT2 - BILL\\_AMT3$',
-                  # '$BILL\\_AMT1 - BILL\\_AMT2$',
-                  
-                  '$\\frac{\\sum_{mnth=1}^{6}PAY\\_AMT_{mnth}}{5}$',
-                  
-                  
-                  
-                  '$PAY\\_AMT5 - PAY\\_AMT6$',
-                  # '$PAY\\_AMT4 - PAY\\_AMT5$',
-                  # '$PAY\\_AMT3 - PAY\\_AMT4$',
-                  # '$PAY\\_AMT2 - PAY\\_AMT3$',
-                  # '$PAY\\_AMT1 - PAY\\_AMT2$',
-                  
-                  "$BILL\\_AMT1 - BILL\\_AMT6$",
-                  
-                  "$UTIL\\_1 - UTIL\\_6$",
-                  
-                  "$PMT\\_RATIO5 - PMT\\_RATIO6$",
-                  # "$PMT\\_RATIO4 - PMT\\_RATIO5$",
-                  # "$PMT\\_RATIO3 - PMT\\_RATIO4$",
-                  # "$PMT\\_RATIO2 - PMT\\_RATIO3$",
-                  
-                  "$\\forall {UTILMR5,UTILMR4,UTILMR3,UTILMR2,UTILMR1} > 0$",
-                  
-                  "$\\forall {BILLAMTMR5,BILLAMTMR4,BILLAMTMR3,BILLAMTMR2,BILLAMTMR1} > 0$",
-                  
-                  "$\\forall{PAYMR5,PAYMR4,PAYMR3,PAYMR2,PAYMR1} > 0$",
-                  
-                  "$\\forall{PMT\\_RATIOMR5,PMT\\_RATIOMR4,PMT\\_RATIOMR3,PMT\\_RATIOMR2} > 0$",
-                  
-                  '$max(BILL\\_AMT1,BILL\\_AMT2,BILL\\_AMT3,BILL\\_AMT4,BILL\\_AMT5,BILL\\_AMT6)$',
-                  
-                  '$max(PAY\\_AMT1,PAY\\_AMT2,PAY\\_AMT3,PAY\\_AMT4,PAY\\_AMT5,PAY\\_AMT6)$',
-                  
-                  '$max(PAY\\_1,PAY\\_2,PAY\\_3,PAY\\_4,PAY\\_5,PAY\\_6)$',
-                  
-                  '$if AGE>=21 AND AGE<=25 then 1 else 0$',
-                  
-              '$\\frac{(LIMIT\\_BAL - \\overline{BILL\\_AMT_{mth}})}{\\sqrt{\\sum_{mth=1}^6\\frac{(BILL\\_AMT_{mth} - \\overline{BILL\\_AMT_{mth}})^2}{5}}}$',
-                  
-                  'ppk binned and replaced by WOE'
-                  
-                  
-                  
-                  
-                  
-                  
-  )
-  
+# EngFeats <- data.frame(
+#   Feature = c(
+#     "Payment to Bill ratio",
+#     "Average Payment to Bill ratio",
+#     "Proportion of credit used in the month",
+#     " Month's in/decrease in credit use",
+#     "Average proportion of credit used",
+#     "Average Montly bill",
+#     "Month's in/decrease in bill",
+#     "Average amount paid",
+#     "Month's in/decrease in payment",
+#     "Balance growth over 6 months",
+#     "Credit utilization growth 6 months",
+#     "Month's in/decrease in Payment ratio",
+#     "Customer with increased utilization over time",
+#     "Customer with increased bill over time",
+#     "Customer with reduced payments time",
+#     "Customer with reduced payment/bill over time",
+#     "Max bill",
+#     "Max payment",
+#     "Max delinquency",
+#     "Age of customers between mentioned range",
+#      "Ppk -Dist to credit limit in units of 3 std.dev of Bill",
+#     "Ppk discretized with WOE values"
+#     
+#     
+#   ),
+#   `Column_Names` = c(
+#     "PMT_RATIO2 - PMT_RATIO6",
+#     # "$PMT\\_RATIO3$",
+#     # "$PMT\\_RATIO4$",
+#     # "$PMT\\_RATIO5$",
+#     # "$PMT\\_RATIO6$",
+#     
+#     "$Avg\\_PMT\\_RATIO$",
+#     
+#     "$UTIL\\_1$ to $UTIL\\_6$ ",
+#     # "$UTIL\\_2$",
+#     # "$UTIL\\_3$",
+#     # "$UTIL\\_4$",
+#     # "$UTIL\\_5$",
+#     # "$UTIL\\_6$",
+#     
+#     "$UTILMR1$ to $UTILMR5$",
+#     # "$UTILMR4$",
+#     # "$UTILMR3$",
+#     # "$UTILMR2$",
+#     # "$UTILMR1$",
+#   
+#    
+#     "$Avg\\_UTIL$",
+#     
+#     "$Avg\\_BILL\\_Amt$",
+#     
+#      "$BILLAMTMR1$ to $BILLAMTMR5$ ", 
+#      # "$BILLAMTMR4$",
+#      # "$BILLAMTMR3$",
+#      # "$BILLAMTMR2$",
+#      # "$BILLAMTMR1$",
+#     
+#      "$Avg\\_PMT\\_Amt$",
+#     
+#       "$PAYMR1$ to $PAYMR5$",
+#       # "$PAYMR4$",
+#       # "$PAYMR3$",
+#       # "$PAYMR2$",
+#       # "$PAYMR1$",
+#     
+#     "$Bal\\_Growth\\_6mo$", 
+#     
+#     "$UTIL\\_Growth\\_6mo$", 
+#     
+#          "$PMT\\_RATIOMR2$ to $PMT\\_RATIOMR5$", 
+#          # "$PMT\\_RATIOMR4$",
+#          # "$PMT\\_RATIOMR3$", 
+#          # "$PMT\\_RATIOMR2$", 
+#     
+#     "$UtilFlag$",
+#     
+#     '$balFlag$',
+#     
+#     "$payFlag$",
+#     
+#     
+#     "$payRatioFlag$",
+#     
+#     "$Max\\_Bill\\_Amt$",
+#     
+#     "$Max\\_Pmt\\_Amt$",
+#     
+#     "$Max\\_Dlq$",
+#     
+#     "$Age\\_21\\_25$",
+#     
+#     "$ppk$",
+#     
+#     "$ppkwoe$"
+#     
+#     
+#     
+#   ),
+#   Calculation = c(' $\\frac{PAY\\_AMT_{mnth-1}}{BILL\\_AMT{mnth}}$ $mnth \\in {2,3,4,5,6}$',
+#                   # ' $\\frac{PAY\\_AMT2}{BILL\\_AMT3}$',
+#                   # ' $\\frac{PAY\\_AMT3}{BILL\\_AMT4}$',
+#                   # ' $\\frac{PAY\\_AMT4}{BILL\\_AMT5}$',
+#                   # ' $\\frac{PAY\\_AMT5}{BILL\\_AMT6}$',
+#   
+#                   ' $\\frac{\\sum_{Month=1}^{5}PAY\\_AMT_{mnth}}{\\sum_{mnth=2}^{6}BILL\\_AMT_{mnth}}$',
+#                   
+#                   ' $\\frac{BILL\\_AMT_{mnth}}{LIMIT\\_BAL}$ $mnth \\in {1,2,3,4,5,6}$',
+#                   # ' $\\frac{BILL\\_AMT2}{LIMIT\\_BAL}$',
+#                   # ' $\\frac{BILL\\_AMT3}{LIMIT\\_BAL}$',
+#                   # ' $\\frac{BILL\\_AMT4}{LIMIT\\_BAL}$',
+#                   # ' $\\frac{BILL\\_AMT5}{LIMIT\\_BAL}$',
+#                   # ' $\\frac{BILL\\_AMT6}{LIMIT\\_BAL}$',
+#                   
+#                   '$UTIL_{mnth-1}- UTIL_{mnth}$ $mnth \\in {2,3,4,5,6}$',
+#                   # '$UTIL\\_4 - UTIL\\_5$',
+#                   # '$UTIL\\_3 - UTIL\\_4$',
+#                   # '$UTIL\\_2 - UTIL\\_3$',
+#                   # '$UTIL\\_1 - UTIL\\_2$',
+#                   
+#                   '$\\frac{\\sum_{mnth=1}^{6}UTIL_{mnth}}{5}$',
+#                   
+#                   '$\\frac{\\sum_{mnth=1}^{6}BILL\\_AMT_{mnth}}{5}$',
+#                   
+#                   '$BILL\\_AMT_{mnth-1} - BILL\\_AMT_{mnth}$ $mnth \\in {2,3,4,5,6}$',
+#                   # '$BILL\\_AMT4 - BILL\\_AMT5$',
+#                   # '$BILL\\_AMT3 - BILL\\_AMT4$',
+#                   # '$BILL\\_AMT2 - BILL\\_AMT3$',
+#                   # '$BILL\\_AMT1 - BILL\\_AMT2$',
+#                   
+#                   '$\\frac{\\sum_{mnth=1}^{6}PAY\\_AMT_{mnth}}{5}$',
+#                   
+#                   
+#                   
+#                   '$PAY\\_AMT_{mnth-1} - PAY\\_AMT_{mnth}$ $mnth \\in {2,3,4,5,6}$',
+#                   # '$PAY\\_AMT4 - PAY\\_AMT5$',
+#                   # '$PAY\\_AMT3 - PAY\\_AMT4$',
+#                   # '$PAY\\_AMT2 - PAY\\_AMT3$',
+#                   # '$PAY\\_AMT1 - PAY\\_AMT2$',
+#                   
+#                   "$BILL\\_AMT_{mnth-1} - BILL\\_AMT_{mnth}$ $mnth \\in {2,3,4,5,6}$",
+#                   
+#                   "$UTIL\\_1 - UTIL\\_6$",
+#                   
+#                   "$PMT\\_RATIO5 - PMT\\_RATIO6$",
+#                   # "$PMT\\_RATIO4 - PMT\\_RATIO5$",
+#                   # "$PMT\\_RATIO3 - PMT\\_RATIO4$",
+#                   # "$PMT\\_RATIO2 - PMT\\_RATIO3$",
+#                   
+#                   "$\\forall {UTILMR5,UTILMR4,UTILMR3,UTILMR2,UTILMR1} > 0$",
+#                   
+#                   "$\\forall {BILLAMTMR5,BILLAMTMR4,BILLAMTMR3,BILLAMTMR2,BILLAMTMR1} > 0$",
+#                   
+#                   "$\\forall{PAYMR5,PAYMR4,PAYMR3,PAYMR2,PAYMR1} > 0$",
+#                   
+#                   "$\\forall{PMT\\_RATIOMR5,PMT\\_RATIOMR4,PMT\\_RATIOMR3,PMT\\_RATIOMR2} > 0$",
+#                   
+#                   '$max(BILL\\_AMT1,BILL\\_AMT2,BILL\\_AMT3,BILL\\_AMT4,BILL\\_AMT5,BILL\\_AMT6)$',
+#                   
+#                   '$max(PAY\\_AMT1,PAY\\_AMT2,PAY\\_AMT3,PAY\\_AMT4,PAY\\_AMT5,PAY\\_AMT6)$',
+#                   
+#                   '$max(PAY\\_1,PAY\\_2,PAY\\_3,PAY\\_4,PAY\\_5,PAY\\_6)$',
+#                   
+#                   '$if AGE>=21 AND AGE<=25 then 1 else 0$',
+#                   
+#               '$\\frac{(LIMIT\\_BAL - \\overline{BILL\\_AMT_{mth}})}{\\sqrt{\\sum_{mth=1}^6\\frac{(BILL\\_AMT_{mth} - \\overline{BILL\\_AMT_{mth}})^2}{5}}}$',
+#                   
+#                   'ppk binned and replaced by WOE'
+#                   
+#                   
+#                   
+#                   
+#                   
+#                   
+#   )
+#   
+# 
+# 
+# )
 
-
-)
-
-knitr::kable(EngFeats,"latex", escape = F,booktabs = T,caption = "Engineered features") %>% 
-  kable_styling(full_width = F,font_size = 7,latex_options = "hold_position") %>% 
-  landscape()
+knitr::kable(data.frame(l = ""),"latex", escape = F,booktabs = T,caption = "Engineered features") 
 
 ```
 
+\elandscape
+\newpage
 
 
 ```{r,eval=T}
@@ -639,7 +644,7 @@ data.frame(prop.table(table(train$DEFAULT))) %>%
 
 It is hypothesized that the magnitude of revolving credit is a reflection of income of customers and income has an effect on credit card default. There is no evidence of magnitude of revolving credit or income having an influence on default. In instances where either the payment or the bill amount were $<=0$ the value was assumed to be one-tenth of a New Taiwan(NT) penny. Figure 2 shows the log of the amounts for easier visulaization. 
 
-```{r,fig.cap="Effect of revolving credit on default"}
+```{r,fig.cap="Effect of revolving credit on default",fig.height=4}
 train %>% 
   ggplot(aes(x=log(ifelse(Avg_BILL_Amt<=0,0.001,Avg_BILL_Amt)),y=log(ifelse(Avg_PMT_Amt<=0,0.001,Avg_PMT_Amt)),col = DEFAULT)) + 
   xlab("log(Avg Bill Amount)") +
@@ -657,7 +662,7 @@ print(mp)
 
 Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late associates to increased odds of defaulting (thicker tails in the density plot). The weights of evidence plot on total & maximum delinquencies shows increased chances of defaulting when total delinquency is past 1 month. This potentialy indicates that the bank pardon's a single late payment.
 
-```{r,fig.cap="Effect of Delinqucies"}
+```{r,fig.cap="Effect of Delinqucies",fig.height=4}
 train %>% 
   mutate(flag = as.factor(ifelse(Avg_BILL_Amt==0|Avg_PMT_Amt==0,1,0))) %>% 
   ggplot(aes(x=as.numeric(DLQ_Count),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("Frequency of Delinquency (DLQ_Count)") ->p1
@@ -687,7 +692,7 @@ gridExtra::grid.arrange(p1,p2,p3,p5, ncol = 2)
 
 A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 4, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is surprising that there are is a increase in the odds for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of the plot below. It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization, 
 
-```{r,fig.cap="Utilization of credit limit's effect on Default"}
+```{r,fig.cap="Utilization of credit limit's effect on Default",fig.height=4}
 train %>% ggplot(aes(x=log(ifelse(ppk <=0, 0.0000001,ppk)),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("log(ppk)")-> u1
 creditdata %>% filter(train==1) %>%  ggplot(aes(x=AGE, y = log(ifelse(ppk <=0, 0.0000001,ppk)), col = DEFAULT)) + geom_point(alpha = 0.4) + theme_bw() + ylab("log(ppk)")-> u2
 train %>% ggplot(aes(y=Avg_UTIL,x = DEFAULT,col = DEFAULT)) + geom_boxplot() + theme_bw()-> u3
@@ -723,7 +728,7 @@ chisq.test(balflagtbl) %>% pander()
 
 ## 5.5 Effect of decreased payments
 
-Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistiscally significant results. The results are not produced in this report for brevity.
+Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistiscally significant results when explored graphically using density plots. However, in the section 5.7.1, decision trees help bring out signal from payment variables. The influence of payments are discussed in section 5.7.1 below.
 
 ## 5.6 Effect of Age
 
@@ -745,7 +750,11 @@ Multivariate decision tree method, where a tree is grown using all predictor var
 
 The best tuning for cost parameter based on 10 fold cross validation was 0.015. Figure 5 shows the tuning and the importance of the various predictors. It is to be noted that count of delinquencies (DLQ_Count) and maximum delinquencies (DLQ_Max) were removed from the predictors list for the model shown below. When included in the model, all the trees zero in on DLQ_Total, DLQ_Count and DLQ_Max leaving very little signal from other predictors to come out. 
 
-```{r, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot"}
+It can be seen that apart from total delinquencies (DLQ_Total) the standard deviation of bill amount (stdBILL), Average payment amount (Avg_PMT_Amt), Average payment ratio (Avg_PMT_RATIO) and maximum payment amount (Max_Pmt_Amt)  are key contributors to the model. Upon inspecting the decision tree in Figure 6, discretizing Abg_PMT_RATIO at cut points 0.03, 0.12 could be useful for modeling purposes.  Avg_PMT_Amt cut points are not very clear from the decision tree. The standard deviation of bill cut points for discretization appears to be 1060 and 4900 NT dollars
+
+The WOE methods would be used to check or corrpoborate the decision trees and explore opportunities for further engineering these variables. 
+
+```{r, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot",fig.height=4}
 
 library(doParallel)
 cl <- makePSOCKcluster(5)
@@ -769,16 +778,17 @@ stopCluster(cl)
 
 
 gridExtra::grid.arrange(plot(rpartFit),plot(varImp(rpartFit),tl.cex = 5),ncol = 2)
+
 ```
 
 
 \newpage
 \blandscape
 
-```{r, fig.cap="Decision tree based on cost parameter tuning"}
+```{r, fig.cap="Decision tree based on cost parameter tuning",fig.height=9, fig.width=16}
 partykit::as.party(rpartFit$finalModel) -> prty
 library(partykit)
-plot(prty,gp = gpar(fontsize = 6),
+plot(prty,gp = gpar(fontsize = 5),
      inner_panel = node_inner,
      ip_args = list(
        abbreviate = F,
@@ -792,28 +802,32 @@ plot(prty,gp = gpar(fontsize = 6),
 \elandscape
 \newpage
 
+Figure 7 confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average paument ratio (left panel of Fig 7). The average payment amount can be binned into 5 groups as shown in the right panel of figure 7. The splitting of total delinquencies as seen in the analysis in section 5.2 is reproduced is reproduced in Figure 7. 
 
+```{r,fig.cap="WOE binning of (top left) Avg_PMT_RATIO, (top right) Avg_PMT_Amt,(bottom left) Bill Standard Deviation, (bottom right) DLQ_Total",fig.pos='asis'}
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(Avg_PMT_RATIO, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 4) ->payratioamt
 
+Information::plot_infotables(payratioamt,"Avg_PMT_RATIO") + coord_flip() + theme_bw() + ggtitle("") + ylab("Avg_PMT_RATIO WOE") + geom_vline(xintercept = c(1.5,2.5),lty = 2, col = 'red') -> pymtratio
 
-```{r}
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(Avg_PMT_Amt, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) ->avgpayamt
 
-rpartFit2 <- caret::train(x = x, 
-                  y = y,
-                  method = "rpart2",
-                  tuneLength = 10,
-                  metric = "ROC",
-                  trControl = ctrl)
+Information::plot_infotables(avgpayamt,"Avg_PMT_Amt") + coord_flip() + theme_bw() + ggtitle("") + ylab("Avg_PMT_Amt WOE") -> avgpymt
 
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(stdBILL, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 4) -> stdbillwoe
+Information::plot_infotables(stdbillwoe,"stdBILL") + coord_flip() + theme_bw() + ggtitle("") + ylab("stdBill WOE") + geom_vline(xintercept = c(2.5),lty = 2, col = 'red') -> stdbillplt
 
-plot(rpartFit2)
+Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(DLQ_Total, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 5) ->dlqbin
 
+Information::plot_infotables(dlqbin,"DLQ_Total") + coord_flip() + theme_bw() + ggtitle("") + ylab("DLQ_Total WOE") -> p3
 
-stopCluster(cl)
+gridExtra::grid.arrange(pymtratio,avgpymt,stdbillplt,p3,ncol = 2)
+```
 
-plot(varImp(rpartFit))
+#### 5.7.1.2 Decision tree with depth of tree tuning
 
-plot(varImp(rpartFit2))
+When constraining the tree building process on the depth of the tree, the contribution of total delinquencies is very high relative to the other predictor variables. Gigures 8 and 9 show the performance & varaible importance and decision tree. The interpretation is consistent with the tree built in bove section. 
 
+```{r,eval = T,fig.cap="Decision tree based on depth of tree",fig.pos = "asis"}
 
 cl <- makePSOCKcluster(5)
 registerDoParallel(cl)
@@ -821,60 +835,29 @@ registerDoParallel(cl)
 ctrl <- trainControl(method = "cv",
                      summaryFunction = twoClassSummary,
                      classProbs = TRUE)
+
 x = train %>% select(-DEFAULT,-DLQ_Count,-DLQ_Max)
 y = as.factor(train$DEFAULT)
 levels(y) <- c("no","yes")
-rpartFit_1 <- caret::train(x = x, 
-                  y = y,
-                  method = "rpart",
-                  tuneLength = 10,
-                  metric = "ROC",
-                  trControl = ctrl)
-
-plot(rpartFit_1)
-
-rpartFit2_1 <- caret::train(x = x, 
+rpartFit2 <- caret::train(x = x, 
                   y = y,
                   method = "rpart2",
                   tuneLength = 10,
                   metric = "ROC",
-                  trControl = ctrl)
-
-
-plot(rpartFit2_1)
-
-plot(varImp(rpartFit_1))
-
-plot(varImp(rpartFit2_1))
+                  trControl = ctrl
+                  )
 stopCluster(cl)
 
-# library(doParallel)
-# cl <- makePSOCKcluster(5)
-# registerDoParallel(cl)
-# 
-# rfFit <- train(x = x %>% select(-ppk,-PerBALinc,-PerUTILinc) %>% as.matrix(), 
-#                   y = y,
-#                   method = "rf",
-#                   tuneLength = 10,
-#                   metric = "ROC",
-#                   trControl = ctrl,
-#                   )
-# 
-# stopCluster(cl)
-# 
-# plot(rfFit)
-# plot(varImp(rfFit))
 
-#skimr::skim(x)
+gridExtra::grid.arrange(plot(rpartFit2),plot(varImp(rpartFit2),tl.cex = 5),ncol = 2)
 ```
 
-\newpage
-\blandscape
 
-```{r}
-partykit::as.party(rpartFit2_1$finalModel) -> prty
+
+```{r,eval = T, fig.cap = "Decision tree pruned by depth of tree", fig.pos="asis"}
+partykit::as.party(rpartFit2$finalModel) -> prty
 library(partykit)
-plot(prty,gp = gpar(fontsize = 6),
+plot(prty,gp = gpar(fontsize = 7),
      inner_panel = node_inner,
      ip_args = list(
        abbreviate = F,
@@ -885,4 +868,47 @@ plot(prty,gp = gpar(fontsize = 6),
      ))
 ```
 
-\elandscape
+
+#### 5.7.1.3 Decision tree with one parameter at a time.
+
+In this section, trees are built using only one parameter per model. The goal is to get a baseline or null model whose performance would be lower threshold for any complex model built in the following sections. 
+
+The best single predictor model is using DLQ_Count with an accuracy of 80.23%. But it can be seen the "No information Rate" is 77.4% (i.e a null model with no predictors). The DLQ_Count variable provides a gain of ~ 2.8 percentage points in accuracy. 
+
+```{r, message = T}
+library(OneR)
+OneR(DEFAULT ~ .,data = train %>% as.data.frame(), verbose = T) -> baselinemod
+confusionMatrix(predict(baselinemod,newdata = train %>% as.data.frame()), train$DEFAULT,positive = "1")
+```
+
+
+### 5.7.2 Simple Logistic Regression model
+
+
+
+```{r,eval =F}
+train %>% select(!!colnames(x[,c(1,3,4,6,18,19:22)])) %>% mutate_at(vars(contains('AGE')),as.factor) -> logitdata
+preProcess(logitdata %>% select(.,matches("Avg")),method = c("center","scale")) -> rec1
+predict(rec1,newdata = logitdata %>% select(.,matches("Avg")))->prpd
+logitdata %>% select(colnames(logitdata)[!colnames(logitdata) %in% colnames(prpd)]) %>% cbind.data.frame(prpd) -> logitprpd
+
+
+
+caret::train(x = logitprpd, 
+                  y = y,
+                  method = "glm",
+             family = "binomial",
+                  tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl
+                  )  ->  logitmdl
+#broom::glance(logitmdl$finalModel)
+
+broom::tidy(logitmdl$finalModel) %>% 
+  kable("latex",digits = 2,caption = "simple logit model") %>% 
+  kable_styling(latex_options = "hold_position")
+```
+
+
+
+

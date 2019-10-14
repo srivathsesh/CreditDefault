@@ -1,0 +1,46 @@
+---
+title: "Untitled"
+author: "Sri Seshadri"
+date: "10/13/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r,eval=T}
+
+library(tidyverse)
+library(caret)
+library(magrittr)
+library(pander)
+library(knitr)
+library(kableExtra)
+library(matrixStats)
+
+EngFeats <- data.frame(
+  Feature = c(
+    "Payment to Bill ratio"
+   
+  ),
+  Column_Names = c(
+    "PMT\\_RATIO2 - PMT\\_RATIO6"
+  
+    
+    
+  ),
+  Calculation = c('$\\frac{PAY\\_AMT_{mnth-1}}{BILL\\_AMT{mnth}}$ $mnth \\in {2,3,4,5,6}$'
+                  
+                  
+  )
+  
+
+
+)
+
+knitr::kable(EngFeats,"latex", escape = F,booktabs = T,caption = "Engineered features") %>% 
+  kable_styling(full_width = F,font_size = 7,latex_options = "hold_position") %>% 
+  landscape()
+
+```
