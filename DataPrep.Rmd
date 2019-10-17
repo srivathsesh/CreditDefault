@@ -15,15 +15,24 @@ output:
 knitr::opts_chunk$set(echo = F,warning=F,message=F)
 ```
 
-# 1. Introduction
+# 1. Introduction (DRAFT)
 
+This paper discusses the various modeling approaches to predict customers defaulting on their credit card payments by using six months' credit card bill amounts, payment history. A working model that takes in customer data and reports a list of customers at risk of default and the amount of money that is at risk. The following are the key insights that were discovered from the data:
 
+  1. X % increase in monthly bill for a customer paying bills at a rate of y% of the monthly bill has Z% increased risk compared to average customer.
+  2. 
 
-# 2. Executive Summary
+# 2. Executive Summary (DRAFT)
+
+Insights as of 10/13:
+
+1. Total delinquency (total number of months late over 6 months) when greater than 2 has increases the chance of default (15% to 52%)
+2. Historical delinquencies, Variance of invoice and average amount paid towards bill are key contributors towards prediction of default.
+
 
 # 3. Data
 
-Data are availble for 30,000 customers spanning between April 2005 and September 2005. The description of the data are shown in Table 1 below. Table 2 and Table 3 show the general summary of the data. Upon inspection of the data summaries, there were data quality issues identified, that are discussed in the following section.
+Data are available for 30,000 customers spanning between April 2005 and September 2005. The description of the data are shown in Table 1 below. Table 2 and Table 3 show the general summary of the data. Upon inspection of the data summaries, there were data quality issues identified, that are discussed in the following section.
 
 ```{r, warning = F, message = F}
 library(tidyverse)
@@ -142,11 +151,11 @@ skimr::skim_to_wide(creditdata) %>%
 
 1. Table 2 shows the variable $EDUCATION$ to have 7 possible values, while the dictionary in table 1 shows us expect 4 possible values. The values 0,5 and 6 would be assigned to a category "unknown", coded as 9.
 
-2. Similary for 54 customers, the value of $MARRIAGE$ is entered as 0. The 0 values are assumed to be "unknown" marital status.
+2. Similarly for 54 customers, the value of $MARRIAGE$ is entered as 0. The 0 values are assumed to be "unknown" marital status.
 
 3. The variable PAY_0 is assumed to be the repayment status as of September 2005.Hence renamed as PAY_1
 
-4. Repayment status has values that include -2 and 0. Approximately 26,000 customers have repayment status that is not described in the dictionary. It is very likely that the data dictionary had an omission in describing -2 and 0. Thefore they are assumed to be non-delayed payments.
+4. Repayment status has values that include -2 and 0. Approximately 26,000 customers have repayment status that is not described in the dictionary. It is very likely that the data dictionary had an omission in describing -2 and 0. Therefore they are assumed to be non-delayed payments.
 
 5. There are 543 customers in the data who are marked delinquent when the average bill over 6 months is 0. It is not clear if the customers defaulted in the months prior to the 6 months of data that is provided.
 
@@ -169,7 +178,7 @@ creditdata %<>%
 
 ## 3.2 Data Splitting
 
-The data was seperated into three groups for model training, validation and testing purposes. The number of customers in each of these groups are shown below in table 4.
+The data was separated into three groups for model training, validation and testing purposes. The number of customers in each of these groups are shown below in table 4.
 
 ```{r,eval=T}
 creditdata %>% 
@@ -642,7 +651,7 @@ data.frame(prop.table(table(train$DEFAULT))) %>%
 
 ### 5.1 Magnitude of revolving credit
 
-It is hypothesized that the magnitude of revolving credit is a reflection of income of customers and income has an effect on credit card default. There is no evidence of magnitude of revolving credit or income having an influence on default. In instances where either the payment or the bill amount were $<=0$ the value was assumed to be one-tenth of a New Taiwan(NT) penny. Figure 2 shows the log of the amounts for easier visulaization. 
+It is hypothesized that the magnitude of revolving credit is a reflection of income of customers and income has an effect on credit card default. There is no evidence of magnitude of revolving credit or income having an influence on default. In instances where either the payment or the bill amount were $<=0$ the value was assumed to be one-tenth of a New Taiwan(NT) penny. Figure 2 shows the log of the amounts for easier visualization. 
 
 ```{r,fig.cap="Effect of revolving credit on default",fig.height=4}
 train %>% 
@@ -660,7 +669,7 @@ print(mp)
 
 ### 5.2 Past Delinquencies in payment
 
-Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late associates to increased odds of defaulting (thicker tails in the density plot). The weights of evidence plot on total & maximum delinquencies shows increased chances of defaulting when total delinquency is past 1 month. This potentialy indicates that the bank pardon's a single late payment.
+Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late associates to increased odds of defaulting (thicker tails in the density plot). The weights of evidence plot on total & maximum delinquencies shows increased chances of defaulting when total delinquency is past 1 month. This potentially indicates that the bank pardon's a single late payment.
 
 ```{r,fig.cap="Effect of Delinqucies",fig.height=4}
 train %>% 
@@ -700,7 +709,7 @@ train %>% ggplot(aes(y=Avg_UTIL,x = DEFAULT,col = DEFAULT)) + geom_boxplot() + t
 gridExtra::grid.arrange(u1,u2,u3,ncol = 2)
 ```
 
-The customers who have  continuous growth in utilization over 6 months is flaged and analyzed. The chi-squared test of indenpendence shows there is a statistical difference. 
+The customers who have  continuous growth in utilization over 6 months is flagged and analyzed. The chi-squared test of independence shows there is a statistical difference. 
 
 
 ```{r}
@@ -715,7 +724,7 @@ chisq.test(utilflagtbl) %>% pander()
 
 ## 5.4 Effect of balances
 
-The effect of increased balances is quantified in the table below. The customers whose balances increases over time (month after month) are flaged and analyzed for the odds in default. The chi squared test of independence show there is a statistical significance due to increasing credit card balance over time. 
+The effect of increased balances is quantified in the table below. The customers whose balances increases over time (month after month) are flagged and analyzed for the odds in default. The chi squared test of independence show there is a statistical significance due to increasing credit card balance over time. 
 
 ```{r}
 table(train$DEFAULT,train$balFlag) -> balflagtbl
@@ -728,7 +737,7 @@ chisq.test(balflagtbl) %>% pander()
 
 ## 5.5 Effect of decreased payments
 
-Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistiscally significant results when explored graphically using density plots. However, in the section 5.7.1, decision trees help bring out signal from payment variables. The influence of payments are discussed in section 5.7.1 below.
+Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistically significant results when explored graphically using density plots. However, in the section 5.7.1, decision trees help bring out signal from payment variables. The influence of payments are discussed in section 5.7.1 below.
 
 ## 5.6 Effect of Age
 
@@ -744,15 +753,15 @@ In this section, two methods are employed to gain more insights on the effects o
 
 ### 5.7.1 Tree based methods.
 
-Multivariate decision tree method, where a tree is grown using all predictor variables in the model. Here a generalizable tree is obtained by using two different methods of pruning a) Using a cost complexity parameter on the leaves b) Depth of the tree. Decision trees are fit on 10 fold crossvalidated samples to arrive at a generalizable decision tree. 
+Multivariate decision tree method, where a tree is grown using all predictor variables in the model. Here a generalizable tree is obtained by using two different methods of pruning a) Using a cost complexity parameter on the leaves b) Depth of the tree. Decision trees are fit on 10 fold cross validated samples to arrive at a generalizable decision tree. 
 
 #### 5.7.1.1 Decision tree with complexity parameter tuning
 
 The best tuning for cost parameter based on 10 fold cross validation was 0.015. Figure 5 shows the tuning and the importance of the various predictors. It is to be noted that count of delinquencies (DLQ_Count) and maximum delinquencies (DLQ_Max) were removed from the predictors list for the model shown below. When included in the model, all the trees zero in on DLQ_Total, DLQ_Count and DLQ_Max leaving very little signal from other predictors to come out. 
 
-It can be seen that apart from total delinquencies (DLQ_Total) the standard deviation of bill amount (stdBILL), Average payment amount (Avg_PMT_Amt), Average payment ratio (Avg_PMT_RATIO) and maximum payment amount (Max_Pmt_Amt)  are key contributors to the model. Upon inspecting the decision tree in Figure 6, discretizing Abg_PMT_RATIO at cut points 0.03, 0.12 could be useful for modeling purposes.  Avg_PMT_Amt cut points are not very clear from the decision tree. The standard deviation of bill cut points for discretization appears to be 1060 and 4900 NT dollars
+It can be seen that apart from total delinquencies (DLQ_Total) the standard deviation of bill amount (stdBILL), Average payment amount (Avg_PMT_Amt), Average payment ratio (Avg_PMT_RATIO) and maximum payment amount (Max_Pmt_Amt)  are key contributors to the model. Upon inspecting the decision tree in Figure 6, discretizing Avg_PMT_RATIO at cut points 0.03, 0.12 could be useful for modeling purposes.  Avg_PMT_Amt cut points are not very clear from the decision tree. The standard deviation of bill cut points for discretization appears to be 1060 and 4900 NT dollars
 
-The WOE methods would be used to check or corrpoborate the decision trees and explore opportunities for further engineering these variables. 
+The WOE methods would be used to check or corroborate the decision trees and explore opportunities for further engineering these variables. 
 
 ```{r, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot",fig.height=4}
 
@@ -802,7 +811,7 @@ plot(prty,gp = gpar(fontsize = 5),
 \elandscape
 \newpage
 
-Figure 7 confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average paument ratio (left panel of Fig 7). The average payment amount can be binned into 5 groups as shown in the right panel of figure 7. The splitting of total delinquencies as seen in the analysis in section 5.2 is reproduced is reproduced in Figure 7. 
+Figure 7 confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average payment ratio (left panel of Fig 7). The average payment amount can be binned into 5 groups as shown in the right panel of figure 7. The splitting of total delinquencies as seen in the analysis in section 5.2 is reproduced is reproduced in Figure 7. 
 
 ```{r,fig.cap="WOE binning of (top left) Avg_PMT_RATIO, (top right) Avg_PMT_Amt,(bottom left) Bill Standard Deviation, (bottom right) DLQ_Total",fig.pos='asis'}
 Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(Avg_PMT_RATIO, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 4) ->payratioamt
@@ -825,9 +834,9 @@ gridExtra::grid.arrange(pymtratio,avgpymt,stdbillplt,p3,ncol = 2)
 
 #### 5.7.1.2 Decision tree with depth of tree tuning
 
-When constraining the tree building process on the depth of the tree, the contribution of total delinquencies is very high relative to the other predictor variables. Gigures 8 and 9 show the performance & varaible importance and decision tree. The interpretation is consistent with the tree built in bove section. 
+When constraining the tree building process on the depth of the tree, the contribution of total delinquencies is very high relative to the other predictor variables. Figures 8 and 9 show the performance & variable importance and decision tree. The interpretation is consistent with the tree built in above section. 
 
-```{r,eval = T,fig.cap="Decision tree based on depth of tree",fig.pos = "asis"}
+```{r,eval = T,fig.cap="Decision tree based on depth of tree",fig.pos = "asis",message=F, warning=F}
 
 cl <- makePSOCKcluster(5)
 registerDoParallel(cl)
@@ -854,7 +863,7 @@ gridExtra::grid.arrange(plot(rpartFit2),plot(varImp(rpartFit2),tl.cex = 5),ncol 
 
 
 
-```{r,eval = T, fig.cap = "Decision tree pruned by depth of tree", fig.pos="asis"}
+```{r,eval = T, fig.cap = "Decision tree pruned by depth of tree", fig.pos="asis", message=F, warning = F}
 partykit::as.party(rpartFit2$finalModel) -> prty
 library(partykit)
 plot(prty,gp = gpar(fontsize = 7),
@@ -875,18 +884,63 @@ In this section, trees are built using only one parameter per model. The goal is
 
 The best single predictor model is using DLQ_Count with an accuracy of 80.23%. But it can be seen the "No information Rate" is 77.4% (i.e a null model with no predictors). The DLQ_Count variable provides a gain of ~ 2.8 percentage points in accuracy. 
 
-```{r, message = T}
+```{r, message = T,warning = F}
 library(OneR)
 OneR(DEFAULT ~ .,data = train %>% as.data.frame(), verbose = T) -> baselinemod
 confusionMatrix(predict(baselinemod,newdata = train %>% as.data.frame()), train$DEFAULT,positive = "1")
 ```
+
+#### 5.7.1.4 Re-Engineer features
+
+Based on the discoveries above, the following vraiables are discretized
+
+- Average Payment Ratio
+- Avergae Payment Amount
+- Standard deviation of bill.
+- Total delinquencies
+
+
+```{r}
+
+#--------------------------------------------------------------------------
+#                      RE-ENGINEER DATA 
+#--------------------------------------------------------------------------
+
+creditdata %<>% 
+  mutate(AvgPMT_0_910 = ifelse(Avg_PMT_Amt >= 0 & Avg_PMT_Amt <= 910,1, 0),
+         AvgPMT_911_1749 = ifelse(Avg_PMT_Amt > 910 & Avg_PMT_Amt <= 1749,1, 0),
+         AvgPMT_1750_3333 = ifelse(Avg_PMT_Amt > 1749 & Avg_PMT_Amt <= 3333.17,1, 0),
+         AvgPMT_3333_6835 = ifelse(Avg_PMT_Amt > 3333.17 & Avg_PMT_Amt <= 6835,1, 0)
+        # AvgPMT_6336_LOT = ifelse(Avg_PMT_Amt >6835,1, 0)
+         ) %>% 
+  mutate(Avg_PMT_RATIO_X_005 = ifelse(Avg_PMT_RATIO < 0.05, 1, 0),
+         Avg_PMT_RATIO_005_011 = ifelse(Avg_PMT_RATIO >= 0.05 & Avg_PMT_RATIO < 0.11,1,0)
+         #Avg_PMT_RATIO_011_X = ifelse(Avg_PMT_RATIO > 0.011,1,0)
+         ) %>% 
+  mutate(stdBILL_x_4521 = ifelse(stdBILL <= 4521.27, 1,0),
+         DLQ_Total_x_1 = ifelse(DLQ_Total < 2,1,0))
+
+#-------------------------------------------------------
+#       re assign train data with new predictors 
+#-------------------------------------------------------
+PmtRatioBucketsCol <- creditdata %>% select(matches("Avg_PMT_RATIO_|AvgPMT_|stdBILL_|DLQ_Total_")) %>% colnames()
+SelectedFeat2 <- c(SelectedFeat[!str_detect(SelectedFeat,"Avg_PMT|std|DLQ_Total")],PmtRatioBucketsCol)
+
+train2 <- creditdata %>% filter(train == 1) %>% select(!!SelectedFeat2,DEFAULT)
+
+
+
+```
+
+
+
 
 
 ### 5.7.2 Simple Logistic Regression model
 
 
 
-```{r,eval =F}
+```{r,eval =T}
 train %>% select(!!colnames(x[,c(1,3,4,6,18,19:22)])) %>% mutate_at(vars(contains('AGE')),as.factor) -> logitdata
 preProcess(logitdata %>% select(.,matches("Avg")),method = c("center","scale")) -> rec1
 predict(rec1,newdata = logitdata %>% select(.,matches("Avg")))->prpd
@@ -910,5 +964,61 @@ broom::tidy(logitmdl$finalModel) %>%
 ```
 
 
+```{r}
+
+registerDoSEQ()
+
+train2 %<>% 
+  mutate_at(PmtRatioBucketsCol,as.factor) %>% 
+  mutate_at(vars(matches("AGE_|Flag")),as.factor)
+
+train2 %>% 
+  skimr::skim() 
+
+preProc <- preProcess(train2 %>% select_if(is.numeric),method = c("center","scale"))
+
+predict(preProc,newdata = train2) -> trainProc
+y_trainProc <- trainProc$DEFAULT
+levels(y_trainProc) <- c("no","yes")
+
+ctrl <- trainControl(method = "cv",
+                     summaryFunction = twoClassSummary,
+                     classProbs = TRUE)
+
+train(x = trainProc[,c(-3,-30)], 
+                  y = y_trainProc,
+                  method = "glm",
+                 family = "binomial",
+                  #tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl
+      
+                  )  ->  logitmdl2
+
+summary(logitmdl2$finalModel)
+
+confusionMatrix(predict(logitmdl2),y_trainProc,positive = "yes")
+logit2.roc <- pROC::roc(response = y_trainProc, predictor = predict(logitmdl2$finalModel))
+
+# -------------------------------------------
+#        Get the validation data ready
+#--------------------------------------------
+
+validate <- creditdata %>% filter(validate == 1) %>% select(!!SelectedFeat2,DEFAULT)
+validate %<>% 
+  mutate_at(PmtRatioBucketsCol,as.factor) %>% 
+  mutate_at(vars(matches("AGE_|Flag")),as.factor)
+
+validProc <- predict(preProc,newdata = validate)
+validY <- validProc$DEFAULT
+levels(validY) <- c("no","yes")
+logit2.roc.val <- pROC::roc(response = validY,predict(logitmdl2$finalModel,newdata = validProc[,c(-3,-30)]))
+plot(logit2.roc,legacy.axes = T, asp = NA, col = "blue")
+plot(logit2.roc.val,legacy.axes = T, asp = NA, col = "red",add = T)
+
+pROC::auc(logit2.roc)
+pROC::auc(logit2.roc.val)
+
+```
 
 

@@ -73,6 +73,6 @@ chisq.test(balflagtbl)
 train %>% ggplot(aes(x=Max_Pmt_Amt,group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw()
 
 
-table(train$DEFAULT,train$payFlag) -> payflagtbl
-chisq.test(payflagtbl)
+
+
 
