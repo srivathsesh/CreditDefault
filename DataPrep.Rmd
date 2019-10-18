@@ -1023,7 +1023,7 @@ pROC::auc(logit2.roc.val)
 
 
 ```{r}
-getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", rowNames = c("train","valid"),cutoff = 0.5){
+getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", rowNames = c("train","valid"),cutoff = 0.5, title = ""){
   
   # mertrics to be used
   # 1. Accuracy, 2. Sensitivity, 3. Specificty 4. NIV, AUC
@@ -1048,7 +1048,13 @@ getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", 
   PerformanceMeasures <- data.frame(PerformanceMeasures) %>% 
     mutate(auc = c(auc(train.roc),auc(valid.roc)))
   
-  return(PerformanceMeasures)
+plot(train.roc,legacy.axes = T, asp = NA, col = "blue",main = title)
+plot(valid.roc,legacy.axes = T, asp = NA, col = "red",add = T)
+
+p <- recordPlot()
+
+return(list(Perf = PerformanceMeasures,
+            Plots = p))
   
   
   
