@@ -1022,3 +1022,37 @@ pROC::auc(logit2.roc.val)
 ```
 
 
+```{r}
+getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", rowNames = c("train","valid"),cutoff = 0.5){
+  
+  # mertrics to be used
+  # 1. Accuracy, 2. Sensitivity, 3. Specificty 4. NIV, AUC
+  
+  library(caret)
+  library(magrittr)
+  library(dplyr)
+  library(pROC)
+
+   trainPred <- as.factor(ifelse(predict(model,trainX) > cutoff, "yes", "no"))
+   validpred <- as.factor(ifelse(predict(model,validX) > cutoff, "yes","no"))
+   
+   train.roc <- roc(response = trainY, predictor = predict(model,trainX))
+   valid.roc <- roc(response = validY, predictor = predict(model,validX))
+   
+  trainConfusion <- confusionMatrix(trainPred,trainY, positive = positive)
+  testConfusion <- confusionMatrix(validpred,validY,positive = positive)
+ 
+  PerformanceMeasures <- rbind(trainConfusion$byClass, testConfusion$byClass)
+  rownames(PerformanceMeasures) <- rowNames
+  
+  PerformanceMeasures <- data.frame(PerformanceMeasures) %>% 
+    mutate(auc = c(auc(train.roc),auc(valid.roc)))
+  
+  return(PerformanceMeasures)
+  
+  
+  
+  
+}
+```
+
