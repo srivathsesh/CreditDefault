@@ -1062,3 +1062,33 @@ return(list(Perf = PerformanceMeasures,
 }
 ```
 
+## 6. Modeling 
+
+### 6.1 Random forest 
+
+```{r}
+train(x = trainProc[,c(-3,-30)], 
+                  y = y_trainProc,
+                  tuneLength = 10,
+                  method = "rf",
+                  metric = "ROC",
+                  trControl = ctrl
+      
+                  )  ->  rf
+
+plot(rf)
+plot(varImp(rf))
+```
+
+```{r}
+library(party)
+train(x = trainProc[,c(-3,-30)], 
+                  y = y_trainProc,
+                  tuneLength = 10,
+                  method = "cforest",
+                  metric = "ROC",
+                  trControl = ctrl
+      
+                  )  ->  rf2
+```
+
