@@ -7,7 +7,9 @@ header-includes:
 - \newcommand{\blandscape}{\begin{landscape}}
 - \newcommand{\elandscape}{\end{landscape}}
 output:
-    pdf_document
+    pdf_document:
+      toc: true
+      toc_depth: 3
  
 ---
 
@@ -663,7 +665,7 @@ train %>%
 
 ggExtra::ggMarginal(scp,type = "histogram",groupColour = T) -> mp
 
-print(mp)
+mp
 
 ```
 
@@ -920,11 +922,22 @@ creditdata %<>%
   mutate(stdBILL_x_4521 = ifelse(stdBILL <= 4521.27, 1,0),
          DLQ_Total_x_1 = ifelse(DLQ_Total < 2,1,0))
 
+#--------------------------------------------------------------------------------
+#               log pmt_amount & bill
+# -------------------------------------------------------------------------------
+
+creditdata %<>% 
+  mutate(logBillAvg = log(ifelse(Avg_BILL_Amt<=0,0.001,Avg_BILL_Amt)),
+         logPayAvg = log(ifelse(Avg_PMT_Amt<=0,0.001,Avg_PMT_Amt)),
+         logppk = log(ifelse(ppk <=0, 0.0000001,ppk))
+  )
+
 #-------------------------------------------------------
 #       re assign train data with new predictors 
 #-------------------------------------------------------
 PmtRatioBucketsCol <- creditdata %>% select(matches("Avg_PMT_RATIO_|AvgPMT_|stdBILL_|DLQ_Total_")) %>% colnames()
 SelectedFeat2 <- c(SelectedFeat[!str_detect(SelectedFeat,"Avg_PMT|std|DLQ_Total")],PmtRatioBucketsCol)
+SelectedFeat3 <- 
 
 train2 <- creditdata %>% filter(train == 1) %>% select(!!SelectedFeat2,DEFAULT)
 
@@ -963,6 +976,63 @@ broom::tidy(logitmdl$finalModel) %>%
   kable_styling(latex_options = "hold_position")
 ```
 
+```{r}
+getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", rowNames = c("train","valid"),cutoff = 0.5, title = "", modelname =""){
+  
+  # mertrics to be used
+  # 1. Accuracy, 2. Sensitivity, 3. Specificty 4. NIV, AUC
+  
+  library(caret)
+  library(magrittr)
+  library(dplyr)
+  library(pROC)
+  
+  
+if(class(model) == "randomForest"){
+    trainPred <- predict(model,trainX,type = "response")
+    validPred <- predict(model,validX,type = "response")
+    
+    train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
+    valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
+    
+  } else{
+    trainPred <- as.factor(ifelse(predict(model,trainX) > cutoff, "yes", "no"))
+    validPred <- as.factor(ifelse(predict(model,validX) > cutoff, "yes","no"))
+    
+    train.roc <- roc(response = trainY, predictor = predict(model,trainX))
+    valid.roc <- roc(response = validY, predictor = predict(model,validX))
+  }
+  
+  
+
+  trainConfusion <- confusionMatrix(trainPred,trainY, positive = positive)
+  testConfusion <- confusionMatrix(validPred,validY,positive = positive)
+  
+  PerformanceMeasures <- rbind(trainConfusion$byClass, testConfusion$byClass)
+  rownames(PerformanceMeasures) <- rowNames
+  
+  PerformanceMeasures <- data.frame(PerformanceMeasures) %>% 
+    mutate(auc = c(auc(train.roc),auc(valid.roc)),
+           Model = modelname)
+  
+  
+  rownames(PerformanceMeasures) <- rowNames
+  
+  plot(train.roc,legacy.axes = T, asp = NA, col = "blue",main = title)
+  plot(valid.roc,legacy.axes = T, asp = NA, col = "red",add = T)
+  legend("bottomright",legend = c(paste0("Train; AUC:",round(PerformanceMeasures$auc[1],2)), paste0("validation; AUC:",round(PerformanceMeasures$auc[2],2))), col = c("blue", "red"), lty = 1,cex = 0.6)
+  
+  p <- recordPlot()
+  plot.new()
+  
+  return(list(Perf = PerformanceMeasures,
+              Plots = p))
+  
+  
+  
+  
+}
+```
 
 ```{r}
 
@@ -983,7 +1053,8 @@ levels(y_trainProc) <- c("no","yes")
 
 ctrl <- trainControl(method = "cv",
                      summaryFunction = twoClassSummary,
-                     classProbs = TRUE)
+                     classProbs = TRUE,
+                     savePredictions = "final")
 
 train(x = trainProc[,c(-3,-30)], 
                   y = y_trainProc,
@@ -1012,62 +1083,23 @@ validate %<>%
 validProc <- predict(preProc,newdata = validate)
 validY <- validProc$DEFAULT
 levels(validY) <- c("no","yes")
-logit2.roc.val <- pROC::roc(response = validY,predict(logitmdl2$finalModel,newdata = validProc[,c(-3,-30)]))
-plot(logit2.roc,legacy.axes = T, asp = NA, col = "blue")
-plot(logit2.roc.val,legacy.axes = T, asp = NA, col = "red",add = T)
 
-pROC::auc(logit2.roc)
-pROC::auc(logit2.roc.val)
+perf.logit <- getPerformance(trainProc[,c(-3,-30)],validProc[,c(-3,-30)],y_trainProc,validY,logitmdl2$finalModel)
 
+perf.logit$Perf %>% kable("latex",digits = 2)
 ```
 
 
-```{r}
-getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", rowNames = c("train","valid"),cutoff = 0.5, title = ""){
-  
-  # mertrics to be used
-  # 1. Accuracy, 2. Sensitivity, 3. Specificty 4. NIV, AUC
-  
-  library(caret)
-  library(magrittr)
-  library(dplyr)
-  library(pROC)
 
-   trainPred <- as.factor(ifelse(predict(model,trainX) > cutoff, "yes", "no"))
-   validpred <- as.factor(ifelse(predict(model,validX) > cutoff, "yes","no"))
-   
-   train.roc <- roc(response = trainY, predictor = predict(model,trainX))
-   valid.roc <- roc(response = validY, predictor = predict(model,validX))
-   
-  trainConfusion <- confusionMatrix(trainPred,trainY, positive = positive)
-  testConfusion <- confusionMatrix(validpred,validY,positive = positive)
- 
-  PerformanceMeasures <- rbind(trainConfusion$byClass, testConfusion$byClass)
-  rownames(PerformanceMeasures) <- rowNames
-  
-  PerformanceMeasures <- data.frame(PerformanceMeasures) %>% 
-    mutate(auc = c(auc(train.roc),auc(valid.roc)))
-  
-plot(train.roc,legacy.axes = T, asp = NA, col = "blue",main = title)
-plot(valid.roc,legacy.axes = T, asp = NA, col = "red",add = T)
-
-p <- recordPlot()
-
-return(list(Perf = PerformanceMeasures,
-            Plots = p))
-  
-  
-  
-  
-}
-```
 
 ## 6. Modeling 
 
 ### 6.1 Random forest 
 
 ```{r}
-train(x = trainProc[,c(-3,-30)], 
+cl <- makePSOCKcluster(5)
+registerDoParallel(cl)
+caret::train(x = trainProc[,c(-3,-30)], 
                   y = y_trainProc,
                   tuneLength = 10,
                   method = "rf",
@@ -1075,20 +1107,55 @@ train(x = trainProc[,c(-3,-30)],
                   trControl = ctrl
       
                   )  ->  rf
+stopCluster(cl)
 
 plot(rf)
 plot(varImp(rf))
+perf.rf <- getPerformance(trainProc[,c(-3,-30)],validProc[,c(-3,-30)],y_trainProc,validY,rf$finalModel)
+
 ```
 
 ```{r}
-library(party)
-train(x = trainProc[,c(-3,-30)], 
+perf.rf$Perf
+
+```
+
+```{r}
+caret::train(x = trainProc[,c(-3,-30)], 
+                  y = y_trainProc,
+                  #tuneLength = 10,
+                  method = "glmStepAIC",
+                  family = "binomial",
+                  metric = "ROC",
+                  trControl = ctrl,
+             verbose = F
+      
+                  )  ->  glmLogit
+```
+
+
+```{r}
+recipes::recipe(DEFAULT ~ ., data = trainProc) -> recep
+recep <- recipes::step_mutate(recep,Avg_BILL_Amt = ifelse(Avg_BILL_Amt <= 0, 0.0001, Avg_BILL_Amt))
+recep %<>% recipes::step_YeoJohnson(Avg_BILL_Amt)
+recep %<>% recipes::step_scale(Avg_BILL_Amt)
+recipes::prep(recep) -> finalrecep
+recipes::bake(finalrecep,trainProc) -> trainProc2
+
+recipes::bake(finalrecep,validProc) -> validProc2
+cl <- makePSOCKcluster(5)
+registerDoParallel(cl)
+caret::train(x = trainProc2[,c(-3,-30)], 
                   y = y_trainProc,
                   tuneLength = 10,
-                  method = "cforest",
+                  method = "rf",
                   metric = "ROC",
                   trControl = ctrl
       
                   )  ->  rf2
+stopCluster(cl)
+
+getPerformance(trainProc2[,c(-3,-30)],validProc2[,c(-3,-30)],y_trainProc,validY,rf$finalModel)
+
 ```
 
