@@ -8,7 +8,7 @@ getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", 
   library(dplyr)
   library(pROC)
   
-  browser()
+  #browser()
   if(class(model) == "randomForest"|class(model) == "OneR"){
     
     if(class(model) == "randomForest"){
@@ -22,7 +22,14 @@ getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", 
     train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
     valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
     
-  } else{
+  } else if(class(model) == "train"){
+    
+    trainPred <- predict(model,trainX)
+    validPred <- predict(model,validX)
+    train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
+    valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
+    
+  }else{
     trainPred <- as.factor(ifelse(predict(model,trainX) > cutoff, "yes", "no"))
     validPred <- as.factor(ifelse(predict(model,validX) > cutoff, "yes","no"))
     
