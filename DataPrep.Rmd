@@ -1216,6 +1216,8 @@ plot(varImp(rf2))
 
 ## xgboost
 
+
+
 ```{r}
 
 library(xgboost)
@@ -1340,4 +1342,31 @@ thdcal %>%
 ```
 
 ### Selected Features
+
+```{r}
+LassoPreds <- Importance %>% top_n(10,abs(Coef))
+xgbPreds <- data.frame(Preds = rownames(varImp(xgb_model)$importance),Imp = varImp(xgb_model)$importance) %>% top_n(10)
+rf2Preds <- data.frame(Preds = rownames(varImp(rf2)$importance),Imp = varImp(rf2)$importance) %>% top_n(12)
+varImp(glmLogit$finalModel)->ImpglmLogit
+glmPreds <- data.frame(Preds = rownames(ImpglmLogit), Importance = ImpglmLogit$Overall)
+glmPreds$Preds <- as.character(glmPreds$Preds)
+# clean glmPreds
+which(str_sub(glmPreds$Preds,nchar(as.character(glmPreds$Preds)))=="1") -> cleanReq
+glmPreds$Preds[cleanReq] <- substr(as.character(glmPreds$Preds)[cleanReq],start = 1,stop = nchar(as.character(glmPreds$Preds)[cleanReq])-1)
+
+rfPreds <- data.frame(Preds = rownames(varImp(rf)$importance),Imp = varImp(rf)$importance) %>% top_n(12)
+
+# manual extraction of the preds rather than intersection for now
+Preds <-union(union(union( union(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPreds$Preds)
+
+trainProc %>% select(!!Preds) %>% mutate_if(is.factor,as.numeric) %>% cor() -> corsPred
+
+corrplot::corrplot(corsPred,tl.cex = .7)
+
+removePreds <- findCorrelation(corsPred)
+
+colnames(corsPred)[c(3,11)]
+
+Preds <- Preds[-removePreds]
+```
 
