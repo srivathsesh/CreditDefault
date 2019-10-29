@@ -751,18 +751,31 @@ Figure 1 in section 4 shows relatively higher chances of defaulting in the early
 
 ```{r}
 lattice::barchart(prop.table(table(train$SEX,train$DEFAULT)))
+table(train$DEFAULT,train$SEX) -> SEXtbl
+prop.table(SEXtbl) %>% 
+  data.frame() %>% rename("SEX" = Var1, "DEFAULT" = Var2) %>% 
+  kable("latex", booktabs = T,caption = "GENDER effect on DEFAULT - ChiSq test",digits = 2) %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+chisq.test(SEXtbl) %>% pander()
+
 ```
 
 
 ## Effect of Education
 
 ```{r}
-lattice::barchart(prop.table(table(train$EDUCATION,train$DEFAULT)))
+lattice::barchart(prop.table(table(train$EDUCATION,train$DEFAULT)),grid=T)
+table(train$DEFAULT,train$EDUCATION) -> EDUtbl
+prop.table(EDUtbl) %>% 
+  data.frame() %>% rename("EDUCATION" = Var1, "DEFAULT" = Var2) %>% 
+  kable("latex", booktabs = T,caption = "EDUCATION effect on DEFAULT - ChiSq test",digits = 2) %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+chisq.test(EDUtbl) %>% pander()
 ```
 
 ```{r}
 lattice::barchart(prop.table(table(train$MARRIAGE,train$DEFAULT)))
-
+library(ggmosaic)
 ggplot(data = train) + geom_mosaic( aes(x=product(EDUCATION,SEX),fill = DEFAULT)) + facet_wrap(~MARRIAGE)
 
 ```
@@ -837,7 +850,7 @@ plot(prty,gp = gpar(fontsize = 10),
 \elandscape
 \newpage
 
-Figure 7 confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average payment ratio (left panel of Fig 7). The average payment amount can be binned into 5 groups as shown in the right panel of figure 7. The splitting of total delinquencies as seen in the analysis in section 5.2 is reproduced is reproduced in Figure 7. 
+Figure 7 confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average payment ratio (left panel of Fig 7). The average payment amount can be binned into 5 groups as shown in the right panel of figure 7. The splitting of total delinquencies as seen in the analysis in section 5.2 is reproduced in Figure 7. 
 
 ```{r,fig.cap="WOE binning of (top left) Avg_PMT_RATIO, (top right) Avg_PMT_Amt,(bottom left) Bill Standard Deviation, (bottom right) DLQ_Total",fig.pos='asis'}
 Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(Avg_PMT_RATIO, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 4) ->payratioamt
@@ -885,6 +898,7 @@ stopCluster(cl)
 
 
 gridExtra::grid.arrange(plot(rpartFit2),plot(varImp(rpartFit2),tl.cex = 5),ncol = 2)
+
 ```
 
 
@@ -923,10 +937,18 @@ confusionMatrix(predict(baselinemod,newdata = train %>% as.data.frame()), train$
 
 Based on the discoveries above, the following vraiables are discretized
 
-- Average Payment Ratio
-- Avergae Payment Amount
+- Average Payment Ratio.
+  + Cut points at 0.05 and 0.11. Therefore two additional variables are created, namely $Avg\_PMT\_RATIO\_X\_005$ - when equals 1 denote average payment ratio below 0.05 and $Avg\_PMT\_RATIO\_005\_011$ when 1 denote average payment ratio between 0.05 and 0.11. When both these variables are 0, it denotes avergae payment ratio above 0.11.
+  
+- Average Payment Amount.
+  + Cut points at 910,1749,3333,6835. Four variables binary features were created to discretize the average payment amount.
+  + The variables created are $AvgPMT\_0\_910$, $AvgPMT\_911\_1749$, $AvgPMT\_1750\_3333$,$AvgPMT\_3333\_6835$
+  
 - Standard deviation of bill.
-- Total delinquencies
+  + cut point at 4521.27. Variable $stdBILL\_x\_4521$ was created to denote standard deviations less than or equal to 4521.27. 
+  
+- Total delinquencies.
+  + Cut point at 2. Variable $DLQ\_Total\_x\_1$ was created to denote Total delinquencies less than 2.
 
 
 ```{r}
@@ -1038,92 +1060,7 @@ valid2 %<>% select(-one_of(c(removeCols,'ppk')))
 
 
 
-```{r,eval =F}
-train %>% select(!!colnames(x[,c(1,3,4,6,18,19:22)])) %>% mutate_at(vars(contains('AGE')),as.factor) -> logitdata
-preProcess(logitdata %>% select(.,matches("Avg")),method = c("center","scale")) -> rec1
-predict(rec1,newdata = logitdata %>% select(.,matches("Avg")))->prpd
-logitdata %>% select(colnames(logitdata)[!colnames(logitdata) %in% colnames(prpd)]) %>% cbind.data.frame(prpd) -> logitprpd
 
-
-
-caret::train(x = logitprpd, 
-                  y = y,
-                  method = "glm",
-             family = "binomial",
-                  tuneLength = 10,
-                  metric = "ROC",
-                  trControl = ctrl
-                  )  ->  logitmdl
-#broom::glance(logitmdl$finalModel)
-
-broom::tidy(logitmdl$finalModel) %>% 
-  kable("latex",digits = 2,caption = "simple logit model") %>% 
-  kable_styling(latex_options = "hold_position")
-```
-
-```{r getPerformance}
-getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", rowNames = c("train","valid"),cutoff = 0.5, title = "", modelname =""){
-  
-  # mertrics to be used
-  # 1. Accuracy, 2. Sensitivity, 3. Specificty 4. NIV, AUC
-  
-  library(caret)
-  library(magrittr)
-  library(dplyr)
-  library(pROC)
- 
-  
-if(class(model) == "randomForest"|class(model) == "OneR"){
-  
-  if(class(model) == "randomForest"){
-    trainPred <- predict(model,trainX,type = "response")
-    validPred <- predict(model,validX,type = "response")
-  } else{
-    trainPred <- predict(model,trainX,type = "class")
-    validPred <- predict(model,validX,type = "class")
-  }
-    
-    train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
-    valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
-    
-} else{
-    trainPred <- as.factor(ifelse(predict(model,trainX) > cutoff, "yes", "no"))
-    validPred <- as.factor(ifelse(predict(model,validX) > cutoff, "yes","no"))
-    
-    train.roc <- roc(response = trainY, predictor = predict(model,trainX))
-    valid.roc <- roc(response = validY, predictor = predict(model,validX))
-  }
-  
-  
-
-  trainConfusion <- confusionMatrix(trainPred,trainY, positive = positive)
-  testConfusion <- confusionMatrix(validPred,validY,positive = positive)
-  
-  PerformanceMeasures <- rbind(trainConfusion$byClass, testConfusion$byClass)
-  rownames(PerformanceMeasures) <- rowNames
-  
-  PerformanceMeasures <- data.frame(PerformanceMeasures) %>% 
-    mutate(auc = c(auc(train.roc),auc(valid.roc)),
-           Model = modelname)
-  
-  
-  rownames(PerformanceMeasures) <- rowNames
-  
-  plot(train.roc,legacy.axes = T, asp = NA, col = "blue",main = title)
-  plot(valid.roc,legacy.axes = T, asp = NA, col = "red",add = T)
-  legend("bottomright",legend = c(paste0("Train; AUC:",round(PerformanceMeasures$auc[1],2)), paste0("validation; AUC:",round(PerformanceMeasures$auc[2],2))), col = c("blue", "red"), lty = 1,cex = 0.6)
-  
-  p <- recordPlot()
-  plot.new()
-  
-  return(list(Perf = PerformanceMeasures,
-              Plots = p))
-  
-  
-  
-  
-}
-```
 
 
 
@@ -1143,7 +1080,7 @@ ctrl <- trainControl(method = "cv",
                      classProbs = TRUE,
                      savePredictions = "final")
 
-caret::train(x = trainProc[,c(-29)], 
+caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
                   y = y_trainProc,
                   method = "glm",
                  family = "binomial",
@@ -1167,7 +1104,7 @@ validProc <- predict(preProc,newdata = valid2)
 validY <- validProc$DEFAULT
 levels(validY) <- c("no","yes")
 
-perf.logit <- getPerformance(trainProc[,c(-29)],validProc[,c(-29)],y_trainProc,validY,logitmdl2$finalModel)
+perf.logit <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(trainProc) %in% 'DEFAULT')],y_trainProc,validY,logitmdl2$finalModel)
 
 perf.logit$Perf %>% kable("latex",digits = 2)
 ```
@@ -1182,7 +1119,7 @@ perf.logit$Perf %>% kable("latex",digits = 2)
 ```{r}
 cl <- makePSOCKcluster(5)
 registerDoParallel(cl)
-caret::train(x = trainProc[,c(-29)], 
+caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
                   y = y_trainProc,
                   tuneLength = 10,
                   method = "rf",
@@ -1194,7 +1131,7 @@ stopCluster(cl)
 
 plot(rf)
 plot(varImp(rf))
-perf.rf <- getPerformance(trainProc[,c(-29)],validProc[,c(-29)],y_trainProc,validY,rf$finalModel)
+perf.rf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel)
 
 ```
 
@@ -1208,7 +1145,7 @@ plot(varImp(rf))
 ```{r}
 
 registerDoSEQ()
-caret::train(x = trainProc[,c(-29)], 
+caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
                   y = y_trainProc,
                   #tuneLength = 10,
                   method = "glmStepAIC",
@@ -1219,7 +1156,7 @@ caret::train(x = trainProc[,c(-29)],
       
                   )  ->  glmLogit
 
-glmLogit.perf <- getPerformance(trainProc[,c(-29)],validProc[,c(-29)],y_trainProc,validY,glmLogit$finalModel)
+glmLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,glmLogit$finalModel)
 
 summary(glmLogit$finalModel)
 
@@ -1229,6 +1166,7 @@ data.frame(Preds = rownames(varImp(glmLogit$finalModel)), Importance = varImp(gl
   arrange(desc(Overall)) %>% 
   ggplot(aes(x=fct_reorder(Preds,Overall), y = Overall)) + geom_point() + geom_col(width = .1) + coord_flip() + theme_bw()
 ```
+
 ### 6.3 Random forest model with  transformed Avg_Bill_Amt
 
 ```{r}
@@ -1242,7 +1180,7 @@ recipes::bake(finalrecep,trainProc) -> trainProc2
 recipes::bake(finalrecep,validProc) -> validProc2
 cl <- makePSOCKcluster(5)
 registerDoParallel(cl)
-caret::train(x = trainProc2[,c(-29)], 
+caret::train(x = trainProc2[,-which(names(trainProc) %in% 'DEFAULT')], 
                   y = y_trainProc,
                   tuneLength = 10,
                   method = "rf",
@@ -1252,7 +1190,7 @@ caret::train(x = trainProc2[,c(-29)],
                   )  ->  rf2
 stopCluster(cl)
 
-getPerformance(trainProc2[,c(-29)],validProc2[,c(-29)],y_trainProc,validY,rf$finalModel)
+getPerformance(trainProc2[,-which(names(trainProc2) %in% 'DEFAULT')],validProc2[,-which(names(validProc2) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel)
 
 ```
 
@@ -1317,7 +1255,7 @@ cl <- makePSOCKcluster(5)
 registerDoParallel(cl)
  
 xgb_model <- caret::train(
-  trainProcMat[,c(-29)],y_trainProc,
+  trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],y_trainProc,
   trControl = xgb_trcontrol,
   tuneGrid = xgbGrid,
   method = "xgbTree",
@@ -1346,7 +1284,7 @@ plot(varImp(xgb_model))
 ```
 
 ```{r}
-getPerformance(trainProcMat[,c(-29)],validProcMat[,c(-29)],y_trainProc,validY,xgb_model$finalModel)
+getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel)
 ```
 
 
@@ -1356,7 +1294,7 @@ getPerformance(trainProcMat[,c(-29)],validProcMat[,c(-29)],y_trainProc,validY,xg
 
 ```{r}
 registerDoSEQ()
-caret::train(x = trainProc[,c(-29)] %>% data.matrix(), 
+caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(), 
                   y = y_trainProc,
                   method = "glmnet",
                   family = "binomial",
@@ -1375,12 +1313,12 @@ Importance <- data.frame(Pred = rownames(lassoPred),Coef = lassoPred[,1])
 
 Importance %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + geom_col(width = 0.1) + geom_point() + coord_flip() + theme_bw()
 
-glmLogit.perf <- getPerformance(trainProc[,c(-29)] %>% data.matrix(),validProc[,c(-29)] %>% data.matrix(),y_trainProc,validY,glmnetLogit)
+glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(),validProc[,-which(names(validProc) %in% 'DEFAULT')] %>% data.matrix(),y_trainProc,validY,glmnetLogit)
 
-glmLogit.perf$Perf
+glmnetLogit.perf$Perf
 ```
 
-```{r}
+```{r,eval = F}
 thresholder(glmnetLogit,threshold = seq(0.1,0.9,by = 0.1)) ->thdcal
 
 thdcal %>% 
@@ -1393,21 +1331,22 @@ thdcal %>%
 ```{r}
 LassoPreds <- Importance %>% top_n(10,abs(Coef))
 xgbPreds <- data.frame(Preds = rownames(varImp(xgb_model)$importance),Imp = varImp(xgb_model)$importance) %>% top_n(10)
-rf2Preds <- data.frame(Preds = rownames(varImp(rf2)$importance),Imp = varImp(rf2)$importance) %>% top_n(12)
+rf2Preds <- data.frame(Preds = rownames(varImp(rf2)$importance),Imp = varImp(rf2)$importance) %>% top_n(10)
 varImp(glmLogit$finalModel)->ImpglmLogit
-glmPreds <- data.frame(Preds = rownames(ImpglmLogit), Importance = ImpglmLogit$Overall)
+glmPreds <- data.frame(Preds = as.character(rownames(ImpglmLogit)), Importance = ImpglmLogit$Overall)
+glmPreds$Preds <- as.character(glmPreds$Preds)
 glmPreds %<>% mutate(Preds = ifelse(str_detect(Preds,'EDUCATION'),'EDUCATION',
                                     ifelse(str_detect(Preds,'SEX'),'SEX',
                                            ifelse(str_detect(Preds,'MARRIAGE'),'MARRIAGE',Preds))))
-glmPreds$Preds <- as.character(glmPreds$Preds)
+#glmPreds$Preds <- as.character(glmPreds$Preds)
 # clean glmPreds
 which(str_sub(glmPreds$Preds,nchar(as.character(glmPreds$Preds)))=="1") -> cleanReq
 glmPreds$Preds[cleanReq] <- substr(as.character(glmPreds$Preds)[cleanReq],start = 1,stop = nchar(as.character(glmPreds$Preds)[cleanReq])-1)
 glmPreds %<>% arrange(desc(Importance)) 
-rfPreds <- data.frame(Preds = rownames(varImp(rf)$importance),Imp = varImp(rf)$importance) %>% top_n(12)
+rfPreds <- data.frame(Preds = rownames(varImp(rf)$importance),Imp = varImp(rf)$importance) %>% top_n(10)
 
 # manual extraction of the preds rather than intersection for now
-Preds <-union(union(union( union(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPreds$Preds[1:8])
+Preds <-intersect(intersect(intersect( intersect(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPreds$Preds[1:8])
 
 trainProc %>% select(!!Preds) %>% mutate_if(is.factor,as.numeric) %>% cor() -> corsPred
 
@@ -1415,6 +1354,20 @@ corrplot::corrplot(corsPred,tl.cex = .7,method = "number")
 
 
 ```
+```{r}
+caret::train(x = trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))], 
+                  y = y_trainProc,
+                  method = "glm",
+                 family = "binomial",
+                  #tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl
+      
+                  ) -> simpleLogit
+
+getPerformance(trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))],validProc[,which(names(validProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))],y_trainProc,validY,simpleLogit$finalModel)
+```
+
 
 ```{r}
 ctrl <- trainControl(method = "cv",
@@ -1458,6 +1411,8 @@ caret::train(x = df[,PredsLogit],
 
 plot(nbSelectedPred)
 
-getPerformance(df[,c(-29)],df_valid[,c(-29)],y_trainProc,validY,nbSelectedPred)
+getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_valid) %in% 'DEFAULT')],y_trainProc,validY,nbSelectedPred)
 ```
+
+
 
