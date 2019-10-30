@@ -1329,7 +1329,7 @@ thdcal %>%
 ### Selected Features
 
 ```{r}
-LassoPreds <- Importance %>% top_n(10,abs(Coef))
+LassoPreds <- Importance %>% top_n(8,abs(Coef))
 xgbPreds <- data.frame(Preds = rownames(varImp(xgb_model)$importance),Imp = varImp(xgb_model)$importance) %>% top_n(10)
 rf2Preds <- data.frame(Preds = rownames(varImp(rf2)$importance),Imp = varImp(rf2)$importance) %>% top_n(10)
 varImp(glmLogit$finalModel)->ImpglmLogit
@@ -1343,10 +1343,11 @@ glmPreds %<>% mutate(Preds = ifelse(str_detect(Preds,'EDUCATION'),'EDUCATION',
 which(str_sub(glmPreds$Preds,nchar(as.character(glmPreds$Preds)))=="1") -> cleanReq
 glmPreds$Preds[cleanReq] <- substr(as.character(glmPreds$Preds)[cleanReq],start = 1,stop = nchar(as.character(glmPreds$Preds)[cleanReq])-1)
 glmPreds %<>% arrange(desc(Importance)) 
+glmPredictors <- glmPreds %>% top_n(10) %>% .$Preds
 rfPreds <- data.frame(Preds = rownames(varImp(rf)$importance),Imp = varImp(rf)$importance) %>% top_n(10)
 
 # manual extraction of the preds rather than intersection for now
-Preds <-intersect(intersect(intersect( intersect(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPreds$Preds[1:8])
+Preds <-union(union(union( union(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPredictors)
 
 trainProc %>% select(!!Preds) %>% mutate_if(is.factor,as.numeric) %>% cor() -> corsPred
 
@@ -1370,6 +1371,23 @@ getPerformance(trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_Co
 
 
 ```{r}
+caret::train(x = trainProc[,which(names(trainProc) %in% Preds)], 
+                  y = y_trainProc,
+                  method = "glm",
+                 family = "binomial",
+                  #tuneLength = 10,
+                  metric = "ROC",
+                  trControl = ctrl
+      
+                  ) -> logitSelectedPred
+
+
+
+getPerformance(trainProc[,which(names(trainProc) %in% Preds)],validProc[,which(names(validProc) %in% Preds)],y_trainProc,validY,logitSelectedPred$finalModel)
+```
+
+
+```{r}
 ctrl <- trainControl(method = "cv",
                      summaryFunction = twoClassSummary,
                      classProbs = TRUE,
@@ -1387,11 +1405,12 @@ caret::train(x = df[,PredsLogit],
                   metric = "ROC",
                   trControl = ctrl
       
-                  ) -> logitSelectedPred
+                  ) -> logitSelectedPred2
 
-getPerformance(df[,c(-29)],df_valid[,c(-29)],y_trainProc,validY,logitSelectedPred$finalModel)
+getPerformance(df[,PredsLogit],df_valid[,PredsLogit],y_trainProc,validY,logitSelectedPred2$finalModel)
 
 ```
+## Naive Bayes 
 
 ```{r}
 search_grid <- expand.grid(
@@ -1400,7 +1419,7 @@ search_grid <- expand.grid(
   adjust = seq(0, 5, by = 1)
 )
 
-caret::train(x = df[,PredsLogit], 
+caret::train(x = df[,Preds], 
                   y = y_trainProc,
                   method = "nb",
                   metric = "ROC",
@@ -1415,4 +1434,96 @@ getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_v
 ```
 
 
+## Neural network
+
+```{r}
+library(keras)
+
+y_train_nn <-  ifelse(y_trainProc == "yes",1,0)
+y_valid_nn <-  ifelse(validY=="yes",1,0)
+
+model <- keras_model_sequential() %>% 
+    # first hidden layer
+  layer_dense(units = 16,activation = "relu",input_shape = length(Preds)) %>% 
+    # add drop out layer
+  layer_dropout(rate = 0.1) %>% 
+  # second hidden layer
+  layer_dense(units = 8, activation = "relu") %>% 
+      # add drop out layer
+  layer_dropout(rate = 0.1) %>%
+  # third layer
+   layer_dense(units = 4, activation = "relu") %>% 
+      # add drop out layer
+  layer_dropout(rate = 0.1) %>%
+  # output layer
+  layer_dense(units = 1,activation = "sigmoid")
+
+# creating custome metric
+metric_auc <- custom_metric("auc",function(y_true,y_pred){
+  K <- backend()
+  y_true <- K$eval(y_true)
+  y_pred <- K$eval(y_pred)
+  roccurve <- roc(response = y_true, predictor = y_pred)
+  aucval <- pROC::auc(roccurve)
+  K$constant(aucval,'float64')
+})
+
+# compile the network
+model %>% 
+compile(
+  optimizer = 'adam',
+  loss = "binary_crossentropy",
+  metrics = c('accuracy')
+)
+
+model
+
+
+```
+
+```{r}
+
+history <- model %>% 
+  fit(trainProcMat[,Preds],
+      y_train_nn,
+      epochs = 100,
+      batch_size = 30,
+      validation_data = list(validProcMat[,Preds],y_valid_nn))
+```
+
+```{r}
+y_train_pred_prob <- predict_proba(model,x = trainProcMat[,Preds]) %>% as.vector()
+y_train_pred_class <- predict_classes(model,x = trainProcMat[,Preds]) %>% as.vector()
+estimates_keras_tbl <- tibble(
+  truth      = y_trainProc,
+  estimate   = as.factor(y_train_pred_class) %>% fct_recode(yes = "1",no = "0"),
+  class_prob = y_train_pred_prob
+)
+
+y_valid_pred_prob <- predict_proba(model,x = validProcMat[,Preds]) %>% as.vector()
+y_valid_pred_class <- predict_classes(model,x = validProcMat[,Preds]) %>% as.vector()
+estimates_valid <- tibble(
+  truth      = validY,
+  estimate   = as.factor(y_valid_pred_class) %>% fct_recode(yes = "1",no = "0"),
+  class_prob = y_valid_pred_prob
+)
+
+estimates_keras_tbl %>% yardstick::roc_auc(truth, class_prob)
+estimates_valid %>% yardstick::roc_auc(truth, class_prob)
+
+ estimates_keras_tbl %>% f_meas(truth, estimate, beta = 1)
+ estimates_valid %>% f_meas(truth, estimate, beta = 1)
+ 
+ estimates_keras_tbl %>% metrics(truth, estimate)
+ estimates_valid %>% metrics(truth, estimate)
+ 
+ tibble(
+  precision = estimates_keras_tbl %>% precision(truth, estimate),
+  recall    = estimates_keras_tbl %>% recall(truth, estimate)
+)
+ tibble(
+  precision = estimates_valid %>% precision(truth, estimate),
+  recall    = estimates_valid %>% recall(truth, estimate)
+)
+```
 
