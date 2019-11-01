@@ -1251,7 +1251,7 @@ thdcal_glmLogit %>%
 
 The important predictors are more or less identical to the stepwise selection model above. 
 
-```{r}
+```{r,fig.cap = "variable importance"}
 registerDoSEQ()
 caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(), 
                   y = y_trainProc,
@@ -1270,17 +1270,20 @@ colnames(lassoPred) <- "Coef"
 
 Importance <- data.frame(Pred = rownames(lassoPred),Coef = lassoPred[,1])
 
-Importance %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + geom_col(width = 0.1) + geom_point() + coord_flip() + theme_bw()
+Importance %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + 
+  geom_col(width = 0.1) + geom_point() + coord_flip() + 
+  theme_bw() + ylab("Predictors") + ggtitle("Lasso - variable importance")
 ```
 
+#### 6.2.1 Lasso regression performance
 
 ```{r}
-glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(),validProc[,-which(names(validProc) %in% 'DEFAULT')] %>% data.matrix(),y_trainProc,validY,glmnetLogit)
-t
-thresholder(glmnetLogit,threshold = seq(0.1,0.9,by = 0.1)) ->thdcal_glmnetLogit
-thdcal_glmnetLogit %>% 
-  ggplot(aes(x=prob_threshold,y = F1
-             )) + geom_point()
+glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(),validProc[,-which(names(validProc) %in% 'DEFAULT')] %>% data.matrix(),y_trainProc,validY,glmnetLogit, title = "Lasso regression")
+
+# thresholder(glmnetLogit,threshold = seq(0.1,0.7,by = 0.1)) ->thdcal_glmnetLogit
+# thdcal_glmnetLogit %>% 
+#   ggplot(aes(x=prob_threshold,y = F1
+#              )) + geom_point()
 
 ```
 
@@ -1301,15 +1304,18 @@ caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')],
 stopCluster(cl)
 
 plot(rf)
-plot(varImp(rf))
-perf.rf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel)
+plot(varImp(rf),top = 20, main = "Random forest variable importance; top 20 predictors",tl.cex = 0.5, grid = F)
+
 
 ```
 
 ```{r}
-perf.rf$Perf
-plot(varImp(rf))
-
+perf.rf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel, cutoff = 0.5,title = "Random forest")
+thresholder(rf,threshold = seq(0.1,0.7,by = 0.1)) ->thdcal_rf
+thdcal_rf %>%
+  ggplot(aes(x=prob_threshold,y = F1
+             )) + geom_point()
+#perf.rf$Perf
 ```
 
 
@@ -1336,7 +1342,7 @@ caret::train(x = trainProc2[,-which(names(trainProc) %in% 'DEFAULT')],
                   )  ->  rf2
 stopCluster(cl)
 
-getPerformance(trainProc2[,-which(names(trainProc2) %in% 'DEFAULT')],validProc2[,-which(names(validProc2) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel)
+getPerformance(trainProc2[,-which(names(trainProc2) %in% 'DEFAULT')],validProc2[,-which(names(validProc2) %in% 'DEFAULT')],y_trainProc,validY,rf2$finalModel)
 
 ```
 
@@ -1422,19 +1428,22 @@ xgb_model <- caret::train(
  
 stopCluster(cl)
  
-plot(xgb_model)
+plot(xgb_model, main = "xgboost tuning")
 
-plot(varImp(xgb_model))
+plot(varImp(xgb_model),top = 20, main = "Top 20 predictors - xgboost")
 
 
 ```
 
 ```{r}
-getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel)
+xgb.Perf <- getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel)
 ```
 
 
 
+```{r}
+xgb.Perf$Perf
+```
 
 
 
