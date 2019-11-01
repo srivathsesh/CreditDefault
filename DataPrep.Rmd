@@ -47,6 +47,9 @@ library(matrixStats)
 library(OneR)
 source('getPerformance.R')
 
+#setting seed
+
+set.seed(10)
 
 #------------------------------------------------------
 #               READ DATA IN
@@ -549,7 +552,7 @@ creditdata %<>%
 ```
 
 
-```{r AGEppkBinning,eval=T,fig.cap="WOE binning",fig.height=4}
+```{r AGEppkBinning,eval=T,fig.cap="WOE binning",fig.height=4,fig.pos='asis'}
 # creditdata %<>% 
 #   mutate(AgeBins = cut(AGE,breaks = seq(from = 25, to = 80,by = 5)))
 #   
@@ -657,7 +660,7 @@ data.frame(prop.table(table(train$DEFAULT))) %>%
 
 It is hypothesized that the magnitude of revolving credit is a reflection of income of customers and income has an effect on credit card default. There is no evidence of magnitude of revolving credit or income having an influence on default. In instances where either the payment or the bill amount were $<=0$ the value was assumed to be one-tenth of a New Taiwan(NT) penny. Figure 2 shows the log of the amounts for easier visualization. 
 
-```{r,fig.cap="Effect of revolving credit on default",fig.height=4}
+```{r,fig.cap="Effect of revolving credit on default",fig.height=4,fig.pos='asis'}
 train %>% 
   ggplot(aes(x=log(ifelse(Avg_BILL_Amt<=0,0.001,Avg_BILL_Amt)),y=log(ifelse(Avg_PMT_Amt<=0,0.001,Avg_PMT_Amt)),col = DEFAULT)) + 
   xlab("log(Avg Bill Amount)") +
@@ -668,14 +671,15 @@ train %>%
 ggExtra::ggMarginal(scp,type = "histogram",groupColour = T) -> mp
 
 mp
-
 ```
+
+
 
 ### 5.2 Past Delinquencies in payment
 
 Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late associates to increased odds of defaulting (thicker tails in the density plot). The weights of evidence plot on total & maximum delinquencies shows increased chances of defaulting when total delinquency is past 1 month. This potentially indicates that the bank pardon's a single late payment.
 
-```{r,fig.cap="Effect of Delinqucies",fig.height=4}
+```{r,fig.cap="Effect of Delinqucies",fig.height=4,fig.pos = 'asis'}
 train %>% 
   mutate(flag = as.factor(ifelse(Avg_BILL_Amt==0|Avg_PMT_Amt==0,1,0))) %>% 
   ggplot(aes(x=as.numeric(DLQ_Count),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("Frequency of Delinquency (DLQ_Count)") ->p1
@@ -705,7 +709,7 @@ gridExtra::grid.arrange(p1,p2,p3,p5, ncol = 2)
 
 A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 4, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is surprising that there are is a increase in the odds for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of the plot below. It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization, 
 
-```{r,fig.cap="Utilization of credit limit's effect on Default",fig.height=4}
+```{r,fig.cap="Utilization of credit limit's effect on Default",fig.height=4,fig.pos = 'asis'}
 train %>% ggplot(aes(x=log(ifelse(ppk <=0, 0.0000001,ppk)),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("log(ppk)")-> u1
 creditdata %>% filter(train==1) %>%  ggplot(aes(x=AGE, y = log(ifelse(ppk <=0, 0.0000001,ppk)), col = DEFAULT)) + geom_point(alpha = 0.4) + theme_bw() + ylab("log(ppk)")-> u2
 train %>% ggplot(aes(y=Avg_UTIL,x = DEFAULT,col = DEFAULT)) + geom_boxplot() + theme_bw()-> u3
@@ -741,16 +745,40 @@ chisq.test(balflagtbl) %>% pander()
 
 ## 5.5 Effect of decreased payments
 
-Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistically significant results when explored graphically using density plots. However, in the section 5.7.1, decision trees help bring out signal from payment variables. The influence of payments are discussed in section 5.7.1 below.
+Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistically significant results when explored graphically using density plots. However, in the section 5.7.1, decision trees help bring out signal from payment variables. The influence of payments are discussed in section 5.9.1 below.
 
 ## 5.6 Effect of Age
 
 Figure 1 in section 4 shows relatively higher chances of defaulting in the early ages (21-24) and in the age group past mid-life 45 years and above. The increased chances in default past mid-life may be potentially attributed to loss in employment and or health related events in life.
 
-## 5.7 Effect of SEX
+## 5.7 Effect of Gender, Education and Marital Status
 
-```{r}
-lattice::barchart(prop.table(table(train$SEX,train$DEFAULT)))
+Effect of SEX on default is explored. In the data, 60% of the samples are of females (coded as 2). It can be seen from Figure 5 that proportions of defaulters are in each group are comparable (25% for males and 21% for females). However the chi-squared test shows the difference in the proportions as statistically significant. This may be likely due to the sensitivity to high number of samples in the training set. The importance of SEX in predicting the defaulters is explored in the model based EDA section below. 
+
+The customers with graduate degree (coded 1), university education (coded 2) and high school diploma (coded 3) have 20%,24% and 26% defaulters respectively. The other and unknown categories have 7% and 8%  defaulters. The effect of education is statistically significant.
+
+Customers who are married, single and marital status as others have 24%,21% and 25% defaulters respectively. The interaction of Gender and Education within every marital status was explored graphically in Figure 5, interactions were not found for the major marital status levels. 
+
+Chi-squared tests show gender, education and marital status are significant. As mentioned above, this may be due to sample size being high and small differences are being deemed statistically significant.  
+
+
+
+```{r,fig.cap = "GENDER,EDUCATION & MARITAL STATUS' effect on DEFAULT",fig.pos='asis'}
+lattice::barchart(prop.table(table(train$SEX,train$DEFAULT)),ylab = "SEX") -> bp1
+lattice::barchart(prop.table(table(train$EDUCATION,train$DEFAULT)),grid=T,ylab = "EDUCATION") -> bp2
+lattice::barchart(prop.table(table(train$MARRIAGE,train$DEFAULT)),grid=T,ylab = "MARRIAGE") -> bp3
+
+
+library(ggmosaic)
+
+ggplot(data = train) + 
+  geom_mosaic( aes(x=product(EDUCATION,SEX),fill = DEFAULT)) + 
+  facet_wrap(~MARRIAGE) + xlab("DEFAULT:SEX") + ylab("EDUCATION") + 
+  ggtitle("DEFAULT by SEX & EDUCATION by martial status") +
+  theme(plot.title = element_text(size = 10))->msp1
+
+gridExtra::grid.arrange(bp1,bp2,bp3,msp1,ncol = 2,nrow= 2)
+
 table(train$DEFAULT,train$SEX) -> SEXtbl
 prop.table(SEXtbl) %>% 
   data.frame() %>% rename("SEX" = Var1, "DEFAULT" = Var2) %>% 
@@ -758,29 +786,26 @@ prop.table(SEXtbl) %>%
   kable_styling(latex_options = "hold_position",font_size = 7)
 chisq.test(SEXtbl) %>% pander()
 
-```
 
-
-## Effect of Education
-
-```{r}
-lattice::barchart(prop.table(table(train$EDUCATION,train$DEFAULT)),grid=T)
 table(train$DEFAULT,train$EDUCATION) -> EDUtbl
 prop.table(EDUtbl) %>% 
   data.frame() %>% rename("EDUCATION" = Var1, "DEFAULT" = Var2) %>% 
   kable("latex", booktabs = T,caption = "EDUCATION effect on DEFAULT - ChiSq test",digits = 2) %>% 
   kable_styling(latex_options = "hold_position",font_size = 7)
 chisq.test(EDUtbl) %>% pander()
+
+
+table(train$DEFAULT,train$MARRIAGE) -> MARtbl
+prop.table(MARtbl) %>% 
+  data.frame() %>% rename("EDUCATION" = Var1, "DEFAULT" = Var2) %>% 
+  kable("latex", booktabs = T,caption = "Marital Status' effect on DEFAULT - ChiSq test",digits = 2) %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+chisq.test(MARtbl) %>% pander()
+
 ```
 
-```{r}
-lattice::barchart(prop.table(table(train$MARRIAGE,train$DEFAULT)))
-library(ggmosaic)
-ggplot(data = train) + geom_mosaic( aes(x=product(EDUCATION,SEX),fill = DEFAULT)) + facet_wrap(~MARRIAGE)
 
-```
-
-## 5.7 Model based EDA
+## 5.8 Model based EDA
 
 In this section, two methods are employed to gain more insights on the effects of the predictor variables on chances of default. 
 
@@ -788,19 +813,23 @@ In this section, two methods are employed to gain more insights on the effects o
 - Simple logistic regression.
 
 
-### 5.7.1 Tree based methods.
+### 5.8.1 Tree based methods.
 
 Multivariate decision tree method, where a tree is grown using all predictor variables in the model. Here a generalizable tree is obtained by using two different methods of pruning a) Using a cost complexity parameter on the leaves b) Depth of the tree. Decision trees are fit on 10 fold cross validated samples to arrive at a generalizable decision tree. 
 
-#### 5.7.1.1 Decision tree with complexity parameter tuning
+#### 5.8.1.1 Decision tree with complexity parameter tuning
 
-The best tuning for cost parameter based on 10 fold cross validation was 0.015. Figure 5 shows the tuning and the importance of the various predictors. It is to be noted that count of delinquencies (DLQ_Count) and maximum delinquencies (DLQ_Max) were removed from the predictors list for the model shown below. When included in the model, all the trees zero in on DLQ_Total, DLQ_Count and DLQ_Max leaving very little signal from other predictors to come out. 
+The best tuning for cost parameter based on 10 fold cross validation was 0.015. Figure 6 shows the tuning and the importance of the various predictors. It is to be noted that count of delinquencies (DLQ_Count) and maximum delinquencies (DLQ_Max) were removed from the predictors list for the model shown below. When included in the model, all the trees zero in on DLQ_Total, DLQ_Count and DLQ_Max leaving very little signal from other predictors to come out. 
 
-It can be seen that apart from total delinquencies (DLQ_Total) the standard deviation of bill amount (stdBILL), Average payment amount (Avg_PMT_Amt), Average payment ratio (Avg_PMT_RATIO) and maximum payment amount (Max_Pmt_Amt)  are key contributors to the model. Upon inspecting the decision tree in Figure 6, discretizing Avg_PMT_RATIO at cut points 0.03, 0.12 could be useful for modeling purposes.  Avg_PMT_Amt cut points are not very clear from the decision tree. The standard deviation of bill cut points for discretization appears to be 1060 and 4900 NT dollars
+It can be seen that apart from total delinquencies (DLQ_Total) the standard deviation of bill amount (stdBILL), Average payment amount (Avg_PMT_Amt), Average payment ratio (Avg_PMT_RATIO) and maximum payment amount (Max_Pmt_Amt)  are key contributors to the model. Upon inspecting the decision tree in Figure 7, discretizing Avg_PMT_RATIO at cut points 0.12 could be useful for modeling purposes. Below further discretization of Avg_PMT_RATIO using WOE is explored. Avg_PMT_Amt cut points are not very clear from the decision tree. The standard deviation of bill cut point for discretization appears to be 1729 NT dollars
 
 The WOE methods would be used to check or corroborate the decision trees and explore opportunities for further engineering these variables. 
 
-```{r, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot",fig.height=4}
+```{r, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot",fig.height=4,fig.pos='asis'}
+
+set.seed(10)
+
+valid <- creditdata %>% filter(validate == 1) %>% select(!!SelectedFeat,DEFAULT)
 
 library(doParallel)
 cl <- makePSOCKcluster(5)
@@ -811,8 +840,12 @@ ctrl <- trainControl(method = "cv",
                      classProbs = TRUE)
 
 x = train %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
+xvalid <- valid %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
 y = as.factor(train$DEFAULT)
+yvalid <- as.factor(valid$DEFAULT)
+
 levels(y) <- c("no","yes")
+levels(yvalid) <- c("no","yes")
 rpartFit <- caret::train(x = x, 
                   y = y,
                   method = "rpart",
@@ -831,7 +864,7 @@ gridExtra::grid.arrange(plot(rpartFit),plot(varImp(rpartFit),tl.cex = 5),ncol = 
 \newpage
 \blandscape
 
-```{r, fig.cap="Decision tree based on cost parameter tuning",fig.height=9, fig.width=16}
+```{r, fig.cap="Decision tree based on cost parameter tuning",fig.height=9, fig.width=16, fig.pos='asis'}
 partykit::as.party(rpartFit$finalModel) -> prty
 library(partykit)
 plot(prty,gp = gpar(fontsize = 10),
@@ -849,6 +882,12 @@ plot(prty,gp = gpar(fontsize = 10),
 
 \elandscape
 \newpage
+
+##### 5.8.1.1.1 Results of Decision tree with complexity parameter tuning
+
+```{r}
+getPerformance(x,xvalid,y,yvalid,rpartFit,title = "rpart decision tree - complexity cost tuning") -> rpartstats
+```
 
 Figure 7 confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average payment ratio (left panel of Fig 7). The average payment amount can be binned into 5 groups as shown in the right panel of figure 7. The splitting of total delinquencies as seen in the analysis in section 5.2 is reproduced in Figure 7. 
 
@@ -871,7 +910,7 @@ Information::plot_infotables(dlqbin,"DLQ_Total") + coord_flip() + theme_bw() + g
 gridExtra::grid.arrange(pymtratio,avgpymt,stdbillplt,p3,ncol = 2)
 ```
 
-#### 5.7.1.2 Decision tree with depth of tree tuning
+#### 5.8.1.2 Decision tree with depth of tree tuning
 
 When constraining the tree building process on the depth of the tree, the contribution of total delinquencies is very high relative to the other predictor variables. Figures 8 and 9 show the performance & variable importance and decision tree. The interpretation is consistent with the tree built in above section. 
 
@@ -885,8 +924,11 @@ ctrl <- trainControl(method = "cv",
                      classProbs = TRUE)
 
 x = train %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
+xvalid <- valid %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
 y = as.factor(train$DEFAULT)
+yvalid <- as.factor(valid$DEFAULT)
 levels(y) <- c("no","yes")
+levels(yvalid) <- c("no","yes")
 rpartFit2 <- caret::train(x = x, 
                   y = y,
                   method = "rpart2",
@@ -918,7 +960,12 @@ plot(prty,gp = gpar(fontsize = 7),
 ```
 
 
-#### 5.7.1.3 Decision tree with one parameter at a time.
+```{r}
+getPerformance(x,xvalid,y,yvalid,rpartFit2,title = "rpart decision tree - depth of tree tuning") -> rpartstats2
+```
+
+
+#### 5.8.1.3 Decision tree with one parameter at a time.
 
 In this section, trees are built using only one parameter per model. The goal is to get a baseline or null model whose performance would be lower threshold for any complex model built in the following sections. 
 
@@ -926,14 +973,21 @@ The best single predictor model is using DLQ_Count with an accuracy of 80.23%. B
 
 ```{r, message = T,warning = F}
 library(OneR)
+xOneR= train %>% select(-Max_Bill_Amt,-DLQ_Max) %>% as.data.frame()
+validOneR <- valid %>% select(-Max_Bill_Amt,-DLQ_Max) %>% as.data.frame()
+
+levels(xOneR$DEFAULT) <- c("no","yes")
+levels(validOneR$DEFAULT) <- c("no","yes")
 #OneR(DEFAULT ~ .,data = train %>% select(-DLQ_Count)%>% as.data.frame(), verbose = T) -> baselinemod
-OneR(DEFAULT ~ .,data = train %>% as.data.frame(), verbose = T) -> baselinemod
-confusionMatrix(predict(baselinemod,newdata = train %>% as.data.frame()), train$DEFAULT,positive = "1")
+OneR(DEFAULT ~ .,data = xOneR, verbose = F) -> baselinemod
+summary(baselinemod)
+#confusionMatrix(predict(baselinemod,newdata = train %>% as.data.frame()), train$DEFAULT,positive = "1")
 
-
+getPerformance(xOneR,
+               validOneR,xOneR$DEFAULT,validOneR$DEFAULT,baselinemod,title = "OneR Decision tree single predictor") -> baselinemodstats
 ```
 
-#### 5.7.1.4 Re-Engineer features
+#### 5.8.1.4 Re-Engineer features
 
 Based on the discoveries above, the following vraiables are discretized
 
@@ -951,7 +1005,7 @@ Based on the discoveries above, the following vraiables are discretized
   + Cut point at 2. Variable $DLQ\_Total\_x\_1$ was created to denote Total delinquencies less than 2.
 
 
-```{r}
+```{r,message=F,warning = F}
 
 #--------------------------------------------------------------------------
 #                      RE-ENGINEER DATA 
@@ -993,21 +1047,34 @@ levels(train2$DEFAULT) <- c("no","yes")
 
 valid2 <- creditdata %>% filter(validate == 1) %>% select(!!SelectedFeat2,DEFAULT)
 levels(valid2$DEFAULT) <- c("no","yes")
+```
 
+#### 5.8.1.5 Re-run of Decision tree with one parameter at a time
+
+The one predictor decision trees are built again with re-engineered features. The results are identical from the previous run. The DLQ_Count variables is further discretized with a cut point of 3. The new feature is named $DLQ\_Count\_3\_X$.
+
+
+```{r}
 #------------------------------------------------------------
 #        re-run baseline model that includes new features
 #------------------------------------------------------------
 
-OneR(DEFAULT ~ .,data = train2 %>% as.data.frame(), verbose = T) -> baselinemod
-confusionMatrix(predict(baselinemod,newdata = train2 %>% as.data.frame()), train2$DEFAULT,positive = "yes")
+OneR(DEFAULT ~ .,data = train2 %>% as.data.frame(), verbose = F) -> baselinemod
+summary(baselinemod)
 
-getPerformance(train2 %>% as.data.frame(),valid2 %>% as.data.frame(),trainY = train2$DEFAULT, validY = valid2$DEFAULT,model = baselinemod)
+c#onfusionMatrix(predict(baselinemod,newdata = train2 %>% as.data.frame()), train2$DEFAULT,positive = "yes")
+
+getPerformance(train2 %>% as.data.frame(),valid2 %>% as.data.frame(),trainY = train2$DEFAULT, validY = valid2$DEFAULT,model = baselinemod, title = "OneR - single predictor decision tree", modelname = "OneR") -> basemodstats
+
+
 
 ```
 
+#### 5.8.1.6 Dropping highly correlated variables
 
+The features $Max\_Bill\_Amt$, $DLQ\_Max$ ,$utilFlag$ and $MARRIAGE.2$ (marital status - single) were not adding new information to the predictor space due to their correlation with other variables. Hence they were removes from the predictor space.
 
-```{r}
+```{r,fig.cap="Correlations amongst predictors",fig.pos="asis"}
 #--------------------------------------------------------------
 #    Feature engineering to split DLQ_Count into 2 buckets
 #--------------------------------------------------------------
@@ -1043,7 +1110,7 @@ valid2 %<>%
 predict(caret::dummyVars(~EDUCATION,data = train2,fullRank = T),newdata = train2) -> EDUDUM
 predict(caret::dummyVars(~MARRIAGE,data = train2,fullRank = T),newdata = train2) -> MARDUM
 
-corrplot::corrplot(cbind.data.frame(train2,EDUDUM,MARDUM) %>% select(-EDUCATION,-MARRIAGE,-DEFAULT) %>% mutate_if(is.factor,as.numeric) %>% cor(.))
+corrplot::corrplot(cbind.data.frame(train2,EDUDUM,MARDUM) %>% select(-EDUCATION,-MARRIAGE,-DEFAULT) %>% mutate_if(is.factor,as.numeric) %>% cor(.),tl.cex = 0.5)
 findCorrelation(cbind.data.frame(train2,EDUDUM,MARDUM) %>% select(-EDUCATION,-MARRIAGE,-DEFAULT) %>% mutate_if(is.factor,as.numeric) %>% cor(.)) -> corvars2remove
 cbind.data.frame(train2,EDUDUM,MARDUM) %>% select(-EDUCATION,-MARRIAGE,-DEFAULT) %>% mutate_if(is.factor,as.numeric) %>% cor(.) %>% colnames() -> corcols
 
@@ -1056,12 +1123,9 @@ valid2 %<>% select(-one_of(c(removeCols,'ppk')))
 ```
 
 
-### 5.7.2 Simple Logistic Regression model
+### 5.8.2 Simple Logistic Regression model
 
-
-
-
-
+The numerical variables (not the factor variables) in the predictor space was centered and scaled for ease of modeling and interpretation. A simple logistic regression model was fit. The model coefficients for the most features is intuitive, for example the males have 12% more odds than feamles to default. For one standard deviation increase in average utilization odds of default increases by 6%. Likewise, one standard deviation increase in average bill amount increases the odds for defaulting by 14%. Customers delinquent by 3 or more months have the odds increase by 2.75 times. Also with decreasing levels in the buckets of average payments the odds of default increases. However, the odds of defaults 15 - 17% lower for lower payment to bill ratios, which is very counterintuitive. 
 
 
 ```{r}
@@ -1090,9 +1154,17 @@ caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')],
       
                   )  ->  logitmdl2
 
-summary(logitmdl2$finalModel)
+broom::tidy(logitmdl2$finalModel) %>% 
+  mutate(oddsRatio = exp(estimate)) %>% 
+  kable("latex",digits = 4, caption = "Summary of Simple Logistic regression model")
+```
 
-confusionMatrix(predict(logitmdl2),y_trainProc,positive = "yes")
+#### 5.8.2.1  Simple Logistic Regression model Performance
+
+The performance table below shows an improved AUC than the single predictor decision trees, howrver the F1 statistic is poorer. 
+
+```{r, fig.cap }
+#confusionMatrix(predict(logitmdl2),y_trainProc,positive = "yes")
 logit2.roc <- pROC::roc(response = y_trainProc, predictor = predict(logitmdl2$finalModel))
 
 # -------------------------------------------
@@ -1104,9 +1176,9 @@ validProc <- predict(preProc,newdata = valid2)
 validY <- validProc$DEFAULT
 levels(validY) <- c("no","yes")
 
-perf.logit <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(trainProc) %in% 'DEFAULT')],y_trainProc,validY,logitmdl2$finalModel)
+perf.logit <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(trainProc) %in% 'DEFAULT')],y_trainProc,validY,logitmdl2$finalModel, title = "Simple Logistic regression")
 
-perf.logit$Perf %>% kable("latex",digits = 2)
+#perf.logit$Perf %>% kable("latex",digits = 2)
 ```
 
 
@@ -1114,7 +1186,106 @@ perf.logit$Perf %>% kable("latex",digits = 2)
 
 ## 6. Model based Feature Selection
 
-### 6.1 Random forest 
+In this section model based feature selection method is employed for better choosing the features for further modeling. Here the following strategies are used for feature selection
+
+  1. Regression based methods
+    + logistic regression with stepwise feature selection.
+    + Lasso regression (binomial distribution)
+    
+  2. Tree based methods
+  
+    + Random forest
+    + Extreme Gradient Boosting (xgBoost)
+    
+The importance of features in all the modles are examined and features are selected based on importance amongst all the models for further modeling.
+    
+
+
+### 6.1 Logistic model with stepwise feature selection
+
+```{r, warning=F, message = F, fig.cap= "feature imporance based on stepwise selection "}
+
+registerDoSEQ()
+caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
+                  y = y_trainProc,
+                  #tuneLength = 10,
+                  method = "glmStepAIC",
+                  family = "binomial",
+                  metric = "ROC",
+                  trControl = ctrl,
+             verbose = F
+      
+                  )  ->  glmLogit
+
+
+
+#summary(glmLogit$finalModel)
+
+#glmLogit.perf$Perf
+
+data.frame(Preds = rownames(varImp(glmLogit$finalModel)), Importance = varImp(glmLogit$finalModel)) %>% 
+  arrange(desc(Overall)) %>% 
+  ggplot(aes(x=fct_reorder(Preds,Overall), y = Overall)) + geom_point() + geom_col(width = .1) + coord_flip() + theme_bw() +
+  xlab("Predictors")
+
+```
+
+#### 6.1.1 Performance of stepwise logit model
+
+The model though has a AUC of 77%, the sensitivity is 16% with F1 as 0.27 for test and train. Different threshold probability cut off to classify as defaulting customer was explored, however 0.5 threshold had the maximum F1.
+
+```{r, fig.cap = "Stepwise logit regression"}
+glmLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,glmLogit$finalModel, title = "Stepwise AIC logistic regression")
+```
+
+```{r}
+thresholder(glmLogit,threshold = seq(0.1,0.9,by = 0.1)) ->thdcal_glmLogit
+thdcal_glmLogit %>% 
+  ggplot(aes(x=prob_threshold,y = F1
+             )) + geom_point()
+
+```
+
+
+### 6.2 Lasso regression
+
+The important predictors are more or less identical to the stepwise selection model above. 
+
+```{r}
+registerDoSEQ()
+caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(), 
+                  y = y_trainProc,
+                  method = "glmnet",
+                  family = "binomial",
+                  metric = "ROC",
+                  trControl = ctrl,
+             tuneGrid = expand.grid(alpha = 1,
+                                   lambda = seq(0.001,0.1,by = 0.001))
+            
+      
+                  )  ->  glmnetLogit
+
+lassoPred <- coef(glmnetLogit$finalModel,glmnetLogit$bestTune$lambda) %>% as.matrix()
+colnames(lassoPred) <- "Coef"
+
+Importance <- data.frame(Pred = rownames(lassoPred),Coef = lassoPred[,1])
+
+Importance %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + geom_col(width = 0.1) + geom_point() + coord_flip() + theme_bw()
+```
+
+
+```{r}
+glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(),validProc[,-which(names(validProc) %in% 'DEFAULT')] %>% data.matrix(),y_trainProc,validY,glmnetLogit)
+t
+thresholder(glmnetLogit,threshold = seq(0.1,0.9,by = 0.1)) ->thdcal_glmnetLogit
+thdcal_glmnetLogit %>% 
+  ggplot(aes(x=prob_threshold,y = F1
+             )) + geom_point()
+
+```
+
+
+### 6.3 Random forest 
 
 ```{r}
 cl <- makePSOCKcluster(5)
@@ -1140,34 +1311,9 @@ perf.rf$Perf
 plot(varImp(rf))
 
 ```
-### 6.2 Logistic model with stepwise feature selection
 
-```{r}
 
-registerDoSEQ()
-caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
-                  y = y_trainProc,
-                  #tuneLength = 10,
-                  method = "glmStepAIC",
-                  family = "binomial",
-                  metric = "ROC",
-                  trControl = ctrl,
-             verbose = F
-      
-                  )  ->  glmLogit
-
-glmLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,glmLogit$finalModel)
-
-summary(glmLogit$finalModel)
-
-glmLogit.perf$Perf
-
-data.frame(Preds = rownames(varImp(glmLogit$finalModel)), Importance = varImp(glmLogit$finalModel)) %>% 
-  arrange(desc(Overall)) %>% 
-  ggplot(aes(x=fct_reorder(Preds,Overall), y = Overall)) + geom_point() + geom_col(width = .1) + coord_flip() + theme_bw()
-```
-
-### 6.3 Random forest model with  transformed Avg_Bill_Amt
+### 6.4 Random forest model with  transformed Avg_Bill_Amt
 
 ```{r}
 recipes::recipe(DEFAULT ~ ., data = trainProc) -> recep
@@ -1198,7 +1344,7 @@ getPerformance(trainProc2[,-which(names(trainProc2) %in% 'DEFAULT')],validProc2[
 plot(varImp(rf2))
 ```
 
-## xgboost
+### 6.5 xgboost
 
 
 
@@ -1290,33 +1436,7 @@ getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],vali
 
 
 
-# lasso regression
 
-```{r}
-registerDoSEQ()
-caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(), 
-                  y = y_trainProc,
-                  method = "glmnet",
-                  family = "binomial",
-                  metric = "ROC",
-                  trControl = ctrl,
-             tuneGrid = expand.grid(alpha = 1,
-                                   lambda = seq(0.001,0.1,by = 0.001))
-            
-      
-                  )  ->  glmnetLogit
-
-lassoPred <- coef(glmnetLogit$finalModel,glmnetLogit$bestTune$lambda) %>% as.matrix()
-colnames(lassoPred) <- "Coef"
-
-Importance <- data.frame(Pred = rownames(lassoPred),Coef = lassoPred[,1])
-
-Importance %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + geom_col(width = 0.1) + geom_point() + coord_flip() + theme_bw()
-
-glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(),validProc[,-which(names(validProc) %in% 'DEFAULT')] %>% data.matrix(),y_trainProc,validY,glmnetLogit)
-
-glmnetLogit.perf$Perf
-```
 
 ```{r,eval = F}
 thresholder(glmnetLogit,threshold = seq(0.1,0.9,by = 0.1)) ->thdcal
@@ -1444,15 +1564,15 @@ y_valid_nn <-  ifelse(validY=="yes",1,0)
 
 model <- keras_model_sequential() %>% 
     # first hidden layer
-  layer_dense(units = 16,activation = "relu",input_shape = length(Preds)) %>% 
+  layer_dense(units = 8,activation = "relu",input_shape = length(Preds)) %>% 
     # add drop out layer
   layer_dropout(rate = 0.1) %>% 
   # second hidden layer
-  layer_dense(units = 8, activation = "relu") %>% 
+  layer_dense(units = 4, activation = "relu") %>% 
       # add drop out layer
   layer_dropout(rate = 0.1) %>%
   # third layer
-   layer_dense(units = 4, activation = "relu") %>% 
+   layer_dense(units = 2, activation = "relu") %>% 
       # add drop out layer
   layer_dropout(rate = 0.1) %>%
   # output layer
@@ -1482,7 +1602,7 @@ model
 ```
 
 ```{r}
-
+set.seed(10)
 history <- model %>% 
   fit(trainProcMat[,Preds],
       y_train_nn,
@@ -1508,6 +1628,70 @@ estimates_valid <- tibble(
   class_prob = y_valid_pred_prob
 )
 
+estimates_keras_tbl %>% yardstick::roc_auc(truth, class_prob)
+estimates_valid %>% yardstick::roc_auc(truth, class_prob)
+
+ estimates_keras_tbl %>% f_meas(truth, estimate, beta = 1)
+ estimates_valid %>% f_meas(truth, estimate, beta = 1)
+ 
+ estimates_keras_tbl %>% metrics(truth, estimate)
+ estimates_valid %>% metrics(truth, estimate)
+ 
+ tibble(
+  precision = estimates_keras_tbl %>% precision(truth, estimate),
+  recall    = estimates_keras_tbl %>% recall(truth, estimate)
+)
+ tibble(
+  precision = estimates_valid %>% precision(truth, estimate),
+  recall    = estimates_valid %>% recall(truth, estimate)
+)
+```
+
+```{r}
+auc_roc <- R6::R6Class("ROC", 
+                       inherit = KerasCallback, 
+                       public = list(
+                             
+                             losses = NULL,
+                             x = NA,
+                             y = NA,
+                             x_val = NA,
+                             y_val = NA,
+                             
+                             initialize = function(training = list(), validation= list()){
+                                   self$x <- training[[1]]                                   
+                                   self$y <- training[[2]]
+                                   self$x_val <- validation[[1]]
+                                   self$y_val <- validation[[2]]
+                             },
+                             
+                             
+                             on_epoch_end = function(epoch, logs = list()){
+                                   
+                                   self$losses <- c(self$losses, logs[["loss"]])
+                                   y_pred <- self$model$predict(self$x)
+                                   y_pred_val <- self$model$predict(self$x_val)
+                                   score = Metrics::auc(actual = self$y, predicted =  y_pred)
+                                   score_val = Metrics::auc(actual = self$y_val, predicted =  y_pred_val)
+                                   print(paste("epoch: ", epoch+1, " roc:", score, ' roc_val:', score_val))
+                             }    
+                       ))
+
+auc_roc_metric <- auc_roc$new(training = list(trainProcMat[,Preds], y_train_nn), validation = list(validProcMat[,Preds],y_valid_nn))
+
+tensorboard("logs/run_b")
+
+history2 <- model %>% 
+  fit(trainProcMat[,Preds],
+      y_train_nn,
+      epochs = 100,
+      batch_size = 30,
+      validation_data = list(validProcMat[,Preds],y_valid_nn),
+      callbacks = list(auc_roc_metric,callback_tensorboard("logs/run_b",histogram_freq = 1,write_graph = T,write_grads = T)))
+ 
+```
+
+```{r}
 estimates_keras_tbl %>% yardstick::roc_auc(truth, class_prob)
 estimates_valid %>% yardstick::roc_auc(truth, class_prob)
 
