@@ -916,27 +916,27 @@ When constraining the tree building process on the depth of the tree, the contri
 
 ```{r,eval = T,fig.cap="Decision tree based on depth of tree",fig.pos = "asis",message=F, warning=F}
 
-cl <- makePSOCKcluster(5)
-registerDoParallel(cl)
-
-ctrl <- trainControl(method = "cv",
-                     summaryFunction = twoClassSummary,
-                     classProbs = TRUE)
-
-x = train %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
-xvalid <- valid %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
-y = as.factor(train$DEFAULT)
-yvalid <- as.factor(valid$DEFAULT)
-levels(y) <- c("no","yes")
-levels(yvalid) <- c("no","yes")
-rpartFit2 <- caret::train(x = x, 
-                  y = y,
-                  method = "rpart2",
-                  tuneLength = 10,
-                  metric = "ROC",
-                  trControl = ctrl
-                  )
-stopCluster(cl)
+# cl <- makePSOCKcluster(5)
+# registerDoParallel(cl)
+# 
+# ctrl <- trainControl(method = "cv",
+#                      summaryFunction = twoClassSummary,
+#                      classProbs = TRUE)
+# 
+# x = train %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
+# xvalid <- valid %>% select(-DEFAULT,-Max_Bill_Amt,-DLQ_Max)
+# y = as.factor(train$DEFAULT)
+# yvalid <- as.factor(valid$DEFAULT)
+# levels(y) <- c("no","yes")
+# levels(yvalid) <- c("no","yes")
+# rpartFit2 <- caret::train(x = x, 
+#                   y = y,
+#                   method = "rpart2",
+#                   tuneLength = 10,
+#                   metric = "ROC",
+#                   trControl = ctrl
+#                   )
+# stopCluster(cl)
 
 
 gridExtra::grid.arrange(plot(rpartFit2),plot(varImp(rpartFit2),tl.cex = 5),ncol = 2)
@@ -980,7 +980,7 @@ levels(xOneR$DEFAULT) <- c("no","yes")
 levels(validOneR$DEFAULT) <- c("no","yes")
 #OneR(DEFAULT ~ .,data = train %>% select(-DLQ_Count)%>% as.data.frame(), verbose = T) -> baselinemod
 OneR(DEFAULT ~ .,data = xOneR, verbose = F) -> baselinemod
-summary(baselinemod)
+summary(baselinemod) %>% pander()
 #confusionMatrix(predict(baselinemod,newdata = train %>% as.data.frame()), train$DEFAULT,positive = "1")
 
 getPerformance(xOneR,
@@ -1207,17 +1207,17 @@ The importance of features in all the modles are examined and features are selec
 
 ```{r, warning=F, message = F, fig.cap= "feature imporance based on stepwise selection "}
 
-registerDoSEQ()
-caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
-                  y = y_trainProc,
-                  #tuneLength = 10,
-                  method = "glmStepAIC",
-                  family = "binomial",
-                  metric = "ROC",
-                  trControl = ctrl,
-             verbose = F
-      
-                  )  ->  glmLogit
+# registerDoSEQ()
+# caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
+#                   y = y_trainProc,
+#                   #tuneLength = 10,
+#                   method = "glmStepAIC",
+#                   family = "binomial",
+#                   metric = "ROC",
+#                   trControl = ctrl,
+#              verbose = F
+#       
+#                   )  ->  glmLogit
 
 
 
@@ -1255,23 +1255,23 @@ thdcal_glmLogit %>%
 The important predictors are more or less identical to the stepwise selection model above. 
 
 ```{r,fig.cap = "variable importance"}
-registerDoSEQ()
-caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(), 
-                  y = y_trainProc,
-                  method = "glmnet",
-                  family = "binomial",
-                  metric = "ROC",
-                  trControl = ctrl,
-             tuneGrid = expand.grid(alpha = 1,
-                                   lambda = seq(0.001,0.1,by = 0.001))
-            
-      
-                  )  ->  glmnetLogit
+# registerDoSEQ()
+# caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(), 
+#                   y = y_trainProc,
+#                   method = "glmnet",
+#                   family = "binomial",
+#                   metric = "ROC",
+#                   trControl = ctrl,
+#              tuneGrid = expand.grid(alpha = 1,
+#                                    lambda = seq(0.001,0.1,by = 0.001))
+#             
+#       
+#                   )  ->  glmnetLogit
 
-lassoPred <- coef(glmnetLogit$finalModel,glmnetLogit$bestTune$lambda) %>% as.matrix()
-colnames(lassoPred) <- "Coef"
-
-Importance <- data.frame(Pred = rownames(lassoPred),Coef = lassoPred[,1])
+# lassoPred <- coef(glmnetLogit$finalModel,glmnetLogit$bestTune$lambda) %>% as.matrix()
+# colnames(lassoPred) <- "Coef"
+# 
+# Importance <- data.frame(Pred = rownames(lassoPred),Coef = lassoPred[,1])
 
 Importance %>% top_n(10) %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + 
   geom_col(width = 0.1) + geom_point() + coord_flip() + 
@@ -1297,20 +1297,20 @@ glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFA
 Random forest methods were tuned with different predictors for each iteration. The below figure shows the tuning results and the top 20 important features. The threshold (probability cut off) to predict the positive class (defaulters) were tuned for the training data by optimizing it for the F1 score. While a threshold of 0.4 yielded the best result in the training data, it did not yield a significant improvement in the validation data. Hence the threshold was retained at its defualt of 0.5.
 
 ```{r,fig.cap = "Random forest, feature selection",fig.pos = "asis"}
-cl <- makePSOCKcluster(5)
-registerDoParallel(cl)
-caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
-                  y = y_trainProc,
-                  tuneLength = 10,
-                  method = "rf",
-                  metric = "ROC",
-                  trControl = ctrl
-      
-                  )  ->  rf
-stopCluster(cl)
-
-plot(rf,main = "Random forest tuning") -> rfTuning
-plot(varImp(rf),top = 20, main = "Random forest top 20 predictors",tl.cex = 0.5, grid = F) -> rfVarImp
+# cl <- makePSOCKcluster(5)
+# registerDoParallel(cl)
+# caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
+#                   y = y_trainProc,
+#                   tuneLength = 10,
+#                   method = "rf",
+#                   metric = "ROC",
+#                   trControl = ctrl
+#       
+#                   )  ->  rf
+# stopCluster(cl)
+# 
+# plot(rf,main = "Random forest tuning") -> rfTuning
+# plot(varImp(rf),top = 20, main = "Random forest top 20 predictors",tl.cex = 0.5, grid = F) -> rfVarImp
 
 gridExtra::grid.arrange(rfTuning,rfVarImp, ncol = 2)
 
@@ -1357,7 +1357,7 @@ getPerformance(trainProc2[,-which(names(trainProc2) %in% 'DEFAULT')],validProc2[
 ```
 
 ```{r,eval = F}
-plot(varImp(rf2))
+#plot(varImp(rf2))
 ```
 
 ### 6.5 xgboost
@@ -1472,25 +1472,25 @@ thdcal %>%
 The union of the top 10 predictors from the models fit in section 6 are as below
 
 ```{r}
-LassoPreds <- Importance %>% top_n(8,abs(Coef))
-xgbPreds <- data.frame(Preds = rownames(varImp(xgb_model)$importance),Imp = varImp(xgb_model)$importance) %>% top_n(10)
-rf2Preds <- data.frame(Preds = rownames(varImp(rf2)$importance),Imp = varImp(rf2)$importance) %>% top_n(10)
-varImp(glmLogit$finalModel)->ImpglmLogit
-glmPreds <- data.frame(Preds = as.character(rownames(ImpglmLogit)), Importance = ImpglmLogit$Overall)
-glmPreds$Preds <- as.character(glmPreds$Preds)
-glmPreds %<>% mutate(Preds = ifelse(str_detect(Preds,'EDUCATION'),'EDUCATION',
-                                    ifelse(str_detect(Preds,'SEX'),'SEX',
-                                           ifelse(str_detect(Preds,'MARRIAGE'),'MARRIAGE',Preds))))
-#glmPreds$Preds <- as.character(glmPreds$Preds)
-# clean glmPreds
-which(str_sub(glmPreds$Preds,nchar(as.character(glmPreds$Preds)))=="1") -> cleanReq
-glmPreds$Preds[cleanReq] <- substr(as.character(glmPreds$Preds)[cleanReq],start = 1,stop = nchar(as.character(glmPreds$Preds)[cleanReq])-1)
-glmPreds %<>% arrange(desc(Importance)) 
-glmPredictors <- glmPreds %>% top_n(10) %>% .$Preds
-rfPreds <- data.frame(Preds = rownames(varImp(rf)$importance),Imp = varImp(rf)$importance) %>% top_n(10)
-
-# manual extraction of the preds rather than intersection for now
-Preds <-union(union(union( union(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPredictors)
+# LassoPreds <- Importance %>% top_n(8,abs(Coef))
+# xgbPreds <- data.frame(Preds = rownames(varImp(xgb_model)$importance),Imp = varImp(xgb_model)$importance) %>% top_n(10)
+# rf2Preds <- data.frame(Preds = rownames(varImp(rf2)$importance),Imp = varImp(rf2)$importance) %>% top_n(10)
+# varImp(glmLogit$finalModel)->ImpglmLogit
+# glmPreds <- data.frame(Preds = as.character(rownames(ImpglmLogit)), Importance = ImpglmLogit$Overall)
+# glmPreds$Preds <- as.character(glmPreds$Preds)
+# glmPreds %<>% mutate(Preds = ifelse(str_detect(Preds,'EDUCATION'),'EDUCATION',
+#                                     ifelse(str_detect(Preds,'SEX'),'SEX',
+#                                            ifelse(str_detect(Preds,'MARRIAGE'),'MARRIAGE',Preds))))
+# #glmPreds$Preds <- as.character(glmPreds$Preds)
+# # clean glmPreds
+# which(str_sub(glmPreds$Preds,nchar(as.character(glmPreds$Preds)))=="1") -> cleanReq
+# glmPreds$Preds[cleanReq] <- substr(as.character(glmPreds$Preds)[cleanReq],start = 1,stop = nchar(as.character(glmPreds$Preds)[cleanReq])-1)
+# glmPreds %<>% arrange(desc(Importance)) 
+# glmPredictors <- glmPreds %>% top_n(10) %>% .$Preds
+# rfPreds <- data.frame(Preds = rownames(varImp(rf)$importance),Imp = varImp(rf)$importance) %>% top_n(10)
+# 
+# # manual extraction of the preds rather than intersection for now
+# Preds <-union(union(union( union(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPredictors)
 
 #trainProc %>% select(!!Preds) %>% mutate_if(is.factor,as.numeric) %>% cor() -> corsPred
 
@@ -1525,17 +1525,17 @@ In this section the predictors identified from the previous section are used to 
 The summary of the logistic regression makes intuitive sense for the most part. For example one standard deviation increase in avergae bill amount leads to 11% increased odds of default. Increased balance over 6 months on credit card increases odds of  default by 7%. Measure of balance as a distance to credit limit decreases in 3 standard deviations decreases (the distances were replaced by weights of evidence - ppkwoe), the odds of default increases by 17%. As the average monthly payments decreases the odds of default increases from 24% to 114% (see odds ratio of AvgPMT_0_910 to AvgPMT_1750_3333). As the number of delinquencies increase beyond 3, the odds of defaulting increases almost 3 times. The lower levels of standard deviations of bill amounts have surprisingly higher odds of default (27%), this could be potentially interpreted as customers only paying the interest and leaving the principal amount on their credit card. 
 
 ```{r}
-registerDoSEQ()
-
-caret::train(x = trainProc[,which(names(trainProc) %in% Preds)], 
-                  y = y_trainProc,
-                  method = "glm",
-                 family = "binomial",
-                  #tuneLength = 10,
-                  metric = "ROC",
-                  trControl = ctrl
-      
-                  ) -> logitSelectedPred
+# registerDoSEQ()
+# 
+# caret::train(x = trainProc[,which(names(trainProc) %in% Preds)], 
+#                   y = y_trainProc,
+#                   method = "glm",
+#                  family = "binomial",
+#                   #tuneLength = 10,
+#                   metric = "ROC",
+#                   trControl = ctrl
+#       
+#                   ) -> logitSelectedPred
 
 #summary(logitSelectedPred$finalModel) %>% pander()
 
@@ -1558,24 +1558,24 @@ getPerformance(trainProc[,which(names(trainProc) %in% Preds)],validProc[,which(n
 The statistically insignificant features are now removed and the logistic regression model is re-fit. The sensitivity improves by a 1% point. 
 
 ```{r}
-ctrl <- trainControl(method = "cv",
-                     summaryFunction = twoClassSummary,
-                     classProbs = TRUE,
-                     savePredictions = "final")
-PredsLogit <- setdiff(Preds,c("PerUTILinc","perBALinc","AVG_UTIL","Max_Pmt_Amt","payFlag","UTIL_Growth_6mo","Avg_BILL_Amt","Avg_UTIL"))
-df <- trainProc
-df_valid <- validProc
-df$ppkwoe <- as.factor(df$ppkwoe)
-df_valid$ppkwoe <- as.factor(df_valid$ppkwoe)
-caret::train(x = df[,PredsLogit], 
-                  y = y_trainProc,
-                  method = "glm",
-                 family = "binomial",
-                  #tuneLength = 10,
-                  metric = "ROC",
-                  trControl = ctrl
-      
-                  ) -> logitSelectedPred2
+# ctrl <- trainControl(method = "cv",
+#                      summaryFunction = twoClassSummary,
+#                      classProbs = TRUE,
+#                      savePredictions = "final")
+# PredsLogit <- setdiff(Preds,c("PerUTILinc","perBALinc","AVG_UTIL","Max_Pmt_Amt","payFlag","UTIL_Growth_6mo","Avg_BILL_Amt","Avg_UTIL"))
+# df <- trainProc
+# df_valid <- validProc
+# df$ppkwoe <- as.factor(df$ppkwoe)
+# df_valid$ppkwoe <- as.factor(df_valid$ppkwoe)
+# caret::train(x = df[,PredsLogit], 
+#                   y = y_trainProc,
+#                   method = "glm",
+#                  family = "binomial",
+#                   #tuneLength = 10,
+#                   metric = "ROC",
+#                   trControl = ctrl
+#       
+#                   ) -> logitSelectedPred2
 
 getPerformance(df[,PredsLogit],df_valid[,PredsLogit],y_trainProc,validY,logitSelectedPred2$finalModel, title = "Logit refit") -> logitSelectedPredPerf2
 
@@ -1585,22 +1585,22 @@ getPerformance(df[,PredsLogit],df_valid[,PredsLogit],y_trainProc,validY,logitSel
 Though our predictor space contains features that are not independant of each other, a Naive Bayes classifier is fit to the data to evaluate its performance. The AUC is comparable to the rest of the models, but Naive Bayes' Sensitivity is as high as the xgBoost's model with a high specificity. The F1 score is 0.5, much higher than all other models. 
 
 ```{r}
-search_grid <- expand.grid(
-  usekernel = c(TRUE, FALSE),
-  fL = 0:5,
-  adjust = seq(0, 5, by = 1)
-)
-
-caret::train(x = df[,Preds], 
-                  y = y_trainProc,
-                  method = "nb",
-                  metric = "ROC",
-                  trControl = ctrl,
-                  tuneGrid = search_grid
-      
-                  ) -> nbSelectedPred
-
-#plot(nbSelectedPred)
+# search_grid <- expand.grid(
+#   usekernel = c(TRUE, FALSE),
+#   fL = 0:5,
+#   adjust = seq(0, 5, by = 1)
+# )
+# 
+# caret::train(x = df[,Preds], 
+#                   y = y_trainProc,
+#                   method = "nb",
+#                   metric = "ROC",
+#                   trControl = ctrl,
+#                   tuneGrid = search_grid
+#       
+#                   ) -> nbSelectedPred
+# 
+# #plot(nbSelectedPred)
 
 getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_valid) %in% 'DEFAULT')],y_trainProc,validY,nbSelectedPred, title = "Naive Bayes model Performance") -> nbPerf
 ```
@@ -1703,7 +1703,7 @@ y_valid_nn <-  ifelse(validY=="yes",1,0)
  
 ```
 
-```{r}
+```{r,eval =F}
 auc_roc <- R6::R6Class("ROC", 
                        inherit = KerasCallback, 
                        public = list(
@@ -1767,7 +1767,7 @@ auc_roc <- R6::R6Class("ROC",
 # )
 ```
 
-```{r}
+```{r,eval =F}
 # take the train data and set it for neural network
 recipes::recipe(DEFAULT ~ ., data = trainProc) -> recep
 #recep <- recipes::step_mutate(recep,Avg_BILL_Amt = ifelse(Avg_BILL_Amt <= 0, 0.0001, Avg_BILL_Amt))
@@ -1799,46 +1799,46 @@ validProc2 %>%
 
 
 ```{r}
-model2 <- keras_model_sequential() %>% 
-    # first hidden layer
-  layer_dense(units = 8,activation = "relu",input_shape = ncol(trainProcMat2)-1) %>% 
-    # add drop out layer
-  layer_dropout(rate = 0.1) %>% 
-  # second hidden layer
-  layer_dense(units = 4, activation = "relu") %>% 
-      # add drop out layer
-  layer_dropout(rate = 0.1) %>%
-  # third layer
-   layer_dense(units = 2, activation = "relu") %>% 
-      # add drop out layer
-  layer_dropout(rate = 0.1) %>%
-  # output layer
-  layer_dense(units = 1,activation = "sigmoid")
-
-# creating custome metric
-metric_auc <- custom_metric("auc",function(y_true,y_pred){
-  K <- backend()
-  y_true <- K$eval(y_true)
-  y_pred <- K$eval(y_pred)
-  roccurve <- roc(response = y_true, predictor = y_pred)
-  aucval <- pROC::auc(roccurve)
-  K$constant(aucval,'float64')
-})
-
-# compile the network
-model2 %>% 
-compile(
-  optimizer = 'adam',
-  loss = "binary_crossentropy",
-  metrics = c('accuracy')
-)
+# model2 <- keras_model_sequential() %>% 
+#     # first hidden layer
+#   layer_dense(units = 8,activation = "relu",input_shape = ncol(trainProcMat2)-1) %>% 
+#     # add drop out layer
+#   layer_dropout(rate = 0.1) %>% 
+#   # second hidden layer
+#   layer_dense(units = 4, activation = "relu") %>% 
+#       # add drop out layer
+#   layer_dropout(rate = 0.1) %>%
+#   # third layer
+#    layer_dense(units = 2, activation = "relu") %>% 
+#       # add drop out layer
+#   layer_dropout(rate = 0.1) %>%
+#   # output layer
+#   layer_dense(units = 1,activation = "sigmoid")
+# 
+# # creating custome metric
+# metric_auc <- custom_metric("auc",function(y_true,y_pred){
+#   K <- backend()
+#   y_true <- K$eval(y_true)
+#   y_pred <- K$eval(y_pred)
+#   roccurve <- roc(response = y_true, predictor = y_pred)
+#   aucval <- pROC::auc(roccurve)
+#   K$constant(aucval,'float64')
+# })
+# 
+# # compile the network
+# model2 %>% 
+# compile(
+#   optimizer = 'adam',
+#   loss = "binary_crossentropy",
+#   metrics = c('accuracy')
+# )
 
 model2
 ```
 
-```{r}
+```{r,eval = F}
 auc_roc_metric <- auc_roc$new(training = list(trainProcMat2[,-27], y_train_nn), validation = list(validProcMat2[,-27], y_valid_nn))
-#auc_roc_metric <- auc_roc$new(training = list(trainProcMat[,Preds], y_train_nn), validation = list(validProcMat[,Preds],y_valid_nn))
+
 tensorboard("logs/run_z")
 
 history3 <- model2 %>%
@@ -1885,7 +1885,9 @@ confusionMatrix(estimates_valid2$estimate,estimates_valid2$truth, positive = "ye
 
 # estimates_keras_tbl2 %>% yardstick::roc_auc(truth, class_prob)
 # estimates_valid2 %>% yardstick::roc_auc(truth, class_prob)
+```
 
+```{r, fig.cap = "Neural Network training"}
 plot(history3)+ggtitle("Neural Network training and validation statistics") + theme_bw()
 
 ```
