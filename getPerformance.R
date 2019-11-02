@@ -56,11 +56,11 @@ getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", 
   plot(valid.roc,legacy.axes = T, asp = NA, col = "red",add = T)
   legend("bottomright",legend = c(paste0("Train; AUC:",round(PerformanceMeasures$auc[1],2)), paste0("validation; AUC:",round(PerformanceMeasures$auc[2],2))), col = c("blue", "red"), lty = 1,cex = 0.6)
   
-  p <- recordPlot()
+  #p <- recordPlot()
   #plot.new()
   
   return(list(Perf = PerformanceMeasures,
-              Plots = p,
+              Plots = recordPlot(),
               conftbltrain = trainConfusion$table,
               conftblvalid = testConfusion$table))
   

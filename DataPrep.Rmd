@@ -46,7 +46,7 @@ library(kableExtra)
 library(matrixStats)
 library(OneR)
 source('getPerformance.R')
-
+load('checkpoint2_3.RData')
 #setting seed
 
 set.seed(10)
@@ -980,7 +980,7 @@ levels(xOneR$DEFAULT) <- c("no","yes")
 levels(validOneR$DEFAULT) <- c("no","yes")
 #OneR(DEFAULT ~ .,data = train %>% select(-DLQ_Count)%>% as.data.frame(), verbose = T) -> baselinemod
 OneR(DEFAULT ~ .,data = xOneR, verbose = F) -> baselinemod
-summary(baselinemod) %>% pander()
+summary(baselinemod)
 #confusionMatrix(predict(baselinemod,newdata = train %>% as.data.frame()), train$DEFAULT,positive = "1")
 
 getPerformance(xOneR,
@@ -1320,12 +1320,13 @@ gridExtra::grid.arrange(rfTuning,rfVarImp, ncol = 2)
 #### 6.3.1 Random forest performance
 
 ```{r}
-perf.rf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel, cutoff = 0.4,title = "Random forest")
-thresholder(rf,threshold = seq(0.1,0.7,by = 0.1)) ->thdcal_rf
+#perf.rf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel, cutoff = 0.4,title = "Random forest")
+#thresholder(rf,threshold = seq(0.1,0.7,by = 0.1)) ->thdcal_rf
 # thdcal_rf %>%
 #   ggplot(aes(x=prob_threshold,y = F1
 #              )) + geom_point()
 #perf.rf$Perf
+perf.rf$Plots
 ```
 
 
@@ -1452,7 +1453,8 @@ plot(varImp(xgb_model),top = 20, main = "Top 20 predictors - xgboost")
 ```
 
 ```{r}
-xgb.Perf <- getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel, title = "xgBoost performance")
+#xgb.Perf <- getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel, title = "xgBoost performance")
+xgb.Perf$Plots
 ```
 
 
@@ -1550,7 +1552,9 @@ broom::tidy(logitSelectedPred$finalModel) %>%
 The sensitivity of the model is poor at 15%. In the previous sections, it was seen xgBoost and lasso regression had close to 30% sensitivity. The F1 score of the model is 0.27. 
 
 ```{r}
-getPerformance(trainProc[,which(names(trainProc) %in% Preds)],validProc[,which(names(validProc) %in% Preds)],y_trainProc,validY,logitSelectedPred$finalModel,title = "Logit model with selected features") -> logitSelectedPredPerf
+#getPerformance(trainProc[,which(names(trainProc) %in% Preds)],validProc[,which(names(validProc) %in% Preds)],y_trainProc,validY,logitSelectedPred$finalModel,title = "Logit model with selected features") -> logitSelectedPredPerf
+
+logitSelectedPredPerf$Plots
 ```
 
 #### 8.1.2 Improved logistic regression model
@@ -1577,7 +1581,9 @@ The statistically insignificant features are now removed and the logistic regres
 #       
 #                   ) -> logitSelectedPred2
 
-getPerformance(df[,PredsLogit],df_valid[,PredsLogit],y_trainProc,validY,logitSelectedPred2$finalModel, title = "Logit refit") -> logitSelectedPredPerf2
+#getPerformance(df[,PredsLogit],df_valid[,PredsLogit],y_trainProc,validY,logitSelectedPred2$finalModel, title = "Logit refit") -> logitSelectedPredPerf2
+
+logitSelectedPredPerf2$Plots
 
 ```
 ### 8.2 Naive Bayes 
@@ -1602,7 +1608,8 @@ Though our predictor space contains features that are not independant of each ot
 # 
 # #plot(nbSelectedPred)
 
-getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_valid) %in% 'DEFAULT')],y_trainProc,validY,nbSelectedPred, title = "Naive Bayes model Performance") -> nbPerf
+#getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_valid) %in% 'DEFAULT')],y_trainProc,validY,nbSelectedPred, title = "Naive Bayes model Performance") -> nbPerf
+nbPerf$Plots
 ```
 
 
