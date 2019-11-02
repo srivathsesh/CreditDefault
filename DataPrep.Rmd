@@ -1198,6 +1198,8 @@ In this section model based feature selection method is employed for better choo
     + Extreme Gradient Boosting (xgBoost)
     
 The importance of features in all the modles are examined and features are selected based on importance amongst all the models for further modeling.
+
+** All models are tuned based on 10 fold cross validated samples on the training data set and tested on the validation data **
     
 
 
@@ -1219,14 +1221,15 @@ caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')],
 
 
 
-#summary(glmLogit$finalModel)
+broom::tidy(glmLogit$finalModel) %>% 
+  kable("latex",digits = 4, caption = "")
 
 #glmLogit.perf$Perf
 
 data.frame(Preds = rownames(varImp(glmLogit$finalModel)), Importance = varImp(glmLogit$finalModel)) %>% 
-  arrange(desc(Overall)) %>% 
+  arrange(desc(Overall)) %>% top_n(12) %>% 
   ggplot(aes(x=fct_reorder(Preds,Overall), y = Overall)) + geom_point() + geom_col(width = .1) + coord_flip() + theme_bw() +
-  xlab("Predictors")
+  xlab("Predictors") + ggtitle("Top 12 predictors - Stepwise selection - Logit")
 
 ```
 
@@ -1238,7 +1241,7 @@ The model though has a AUC of 77%, the sensitivity is 16% with F1 as 0.27 for te
 glmLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,glmLogit$finalModel, title = "Stepwise AIC logistic regression")
 ```
 
-```{r}
+```{r, eval = F}
 thresholder(glmLogit,threshold = seq(0.1,0.9,by = 0.1)) ->thdcal_glmLogit
 thdcal_glmLogit %>% 
   ggplot(aes(x=prob_threshold,y = F1
@@ -1270,12 +1273,13 @@ colnames(lassoPred) <- "Coef"
 
 Importance <- data.frame(Pred = rownames(lassoPred),Coef = lassoPred[,1])
 
-Importance %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + 
+Importance %>% top_n(10) %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(Coef))) + 
   geom_col(width = 0.1) + geom_point() + coord_flip() + 
-  theme_bw() + ylab("Predictors") + ggtitle("Lasso - variable importance")
+  theme_bw() + xlab("Predictors") + ggtitle("Lasso - variable importance (top 10)")
 ```
 
 #### 6.2.1 Lasso regression performance
+
 
 ```{r}
 glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(),validProc[,-which(names(validProc) %in% 'DEFAULT')] %>% data.matrix(),y_trainProc,validY,glmnetLogit, title = "Lasso regression")
@@ -1290,7 +1294,9 @@ glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFA
 
 ### 6.3 Random forest 
 
-```{r}
+Random forest methods were tuned with different predictors for each iteration. The below figure shows the tuning results and the top 20 important features. The threshold (probability cut off) to predict the positive class (defaulters) were tuned for the training data by optimizing it for the F1 score. While a threshold of 0.4 yielded the best result in the training data, it did not yield a significant improvement in the validation data. Hence the threshold was retained at its defualt of 0.5.
+
+```{r,fig.cap = "Random forest, feature selection",fig.pos = "asis"}
 cl <- makePSOCKcluster(5)
 registerDoParallel(cl)
 caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')], 
@@ -1303,25 +1309,29 @@ caret::train(x = trainProc[,-which(names(trainProc) %in% 'DEFAULT')],
                   )  ->  rf
 stopCluster(cl)
 
-plot(rf)
-plot(varImp(rf),top = 20, main = "Random forest variable importance; top 20 predictors",tl.cex = 0.5, grid = F)
+plot(rf,main = "Random forest tuning") -> rfTuning
+plot(varImp(rf),top = 20, main = "Random forest top 20 predictors",tl.cex = 0.5, grid = F) -> rfVarImp
+
+gridExtra::grid.arrange(rfTuning,rfVarImp, ncol = 2)
 
 
 ```
 
+#### 6.3.1 Random forest performance
+
 ```{r}
-perf.rf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel, cutoff = 0.5,title = "Random forest")
+perf.rf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(validProc) %in% 'DEFAULT')],y_trainProc,validY,rf$finalModel, cutoff = 0.4,title = "Random forest")
 thresholder(rf,threshold = seq(0.1,0.7,by = 0.1)) ->thdcal_rf
-thdcal_rf %>%
-  ggplot(aes(x=prob_threshold,y = F1
-             )) + geom_point()
+# thdcal_rf %>%
+#   ggplot(aes(x=prob_threshold,y = F1
+#              )) + geom_point()
 #perf.rf$Perf
 ```
 
 
-### 6.4 Random forest model with  transformed Avg_Bill_Amt
 
-```{r}
+
+```{r,eval = F}
 recipes::recipe(DEFAULT ~ ., data = trainProc) -> recep
 recep <- recipes::step_mutate(recep,Avg_BILL_Amt = ifelse(Avg_BILL_Amt <= 0, 0.0001, Avg_BILL_Amt))
 recep %<>% recipes::step_YeoJohnson(Avg_BILL_Amt)
@@ -1346,13 +1356,13 @@ getPerformance(trainProc2[,-which(names(trainProc2) %in% 'DEFAULT')],validProc2[
 
 ```
 
-```{r}
+```{r,eval = F}
 plot(varImp(rf2))
 ```
 
 ### 6.5 xgboost
 
-
+An extreme gradient boosting model was tuned with a constant learning rate of 10% and L2 regularization of 0. The model was tuned over the depth of trees and 10% to 90% of the predictor space. The tuning was performed over 100% and 75% of the training samples. Figures below shows the model tuning results and the variable importance. 
 
 ```{r}
 
@@ -1395,7 +1405,7 @@ xgbGrid <- expand.grid(
   #lambda = c(0,0.05,0.1,0.5),
   min_child_weight=1,
   subsample= c(0.75,1),
-  colsample_bytree = seq(0.5,0.9,length.out = 5)
+  colsample_bytree = seq(0.1,0.9,length.out = 5)
   
  
 )
@@ -1403,7 +1413,7 @@ xgbGrid <- expand.grid(
  
  
 library(doParallel)
-cl <- makePSOCKcluster(5)
+cl <- makePSOCKcluster(6)
 registerDoParallel(cl)
  
 xgb_model <- caret::train(
@@ -1427,27 +1437,29 @@ xgb_model <- caret::train(
 #                eval_metric = )
  
 stopCluster(cl)
- 
+```
+
+```{r, fig.cap = "xgBoost tuning"}
 plot(xgb_model, main = "xgboost tuning")
+```
 
-plot(varImp(xgb_model),top = 20, main = "Top 20 predictors - xgboost")
+```{r, fig.cap = "xgBoost variable importance"}
+plot(varImp(xgb_model),top = 20, main = "Top 20 predictors - xgboost") 
+
+#gridExtra::grid.arrange(xgbtuning,varImpxgb,ncol = 2)
 
 
 ```
 
 ```{r}
-xgb.Perf <- getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel)
+xgb.Perf <- getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel, title = "xgBoost performance")
 ```
 
-
-
-```{r}
-xgb.Perf$Perf
-```
 
 
 
 ```{r,eval = F}
+
 thresholder(glmnetLogit,threshold = seq(0.1,0.9,by = 0.1)) ->thdcal
 
 thdcal %>% 
@@ -1455,7 +1467,9 @@ thdcal %>%
              )) + geom_point()
 ```
 
-### Selected Features
+## 7. Selected Features
+
+The union of the top 10 predictors from the models fit in section 6 are as below
 
 ```{r}
 LassoPreds <- Importance %>% top_n(8,abs(Coef))
@@ -1478,13 +1492,17 @@ rfPreds <- data.frame(Preds = rownames(varImp(rf)$importance),Imp = varImp(rf)$i
 # manual extraction of the preds rather than intersection for now
 Preds <-union(union(union( union(LassoPreds$Pred[-1],xgbPreds$Preds),rf2Preds$Preds),rfPreds$Preds),glmPredictors)
 
-trainProc %>% select(!!Preds) %>% mutate_if(is.factor,as.numeric) %>% cor() -> corsPred
+#trainProc %>% select(!!Preds) %>% mutate_if(is.factor,as.numeric) %>% cor() -> corsPred
 
-corrplot::corrplot(corsPred,tl.cex = .7,method = "number")
+#corrplot::corrplot(corsPred,tl.cex = .7,method = "number")
 
-
+matrix(c(Preds,""),ncol = 3) %>% 
+  kable("latex",caption = "Predictors chosen for modeling") %>% 
+  kable_styling(latex_options = "hold_position")
 ```
-```{r}
+
+
+```{r,eval=F}
 caret::train(x = trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))], 
                   y = y_trainProc,
                   method = "glm",
@@ -1498,8 +1516,17 @@ caret::train(x = trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_
 getPerformance(trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))],validProc[,which(names(validProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))],y_trainProc,validY,simpleLogit$finalModel)
 ```
 
+## 8. Modeling
+
+In this section the predictors identified from the previous section are used to build classification model to predict defaulting customers. The models are fit and their appropriate statistics are shown in this section.
+
+### 8.1 Logistic regression 
+
+The summary of the logistic regression makes intuitive sense for the most part. For example one standard deviation increase in avergae bill amount leads to 11% increased odds of default. Increased balance over 6 months on credit card increases odds of  default by 7%. Measure of balance as a distance to credit limit decreases in 3 standard deviations decreases (the distances were replaced by weights of evidence - ppkwoe), the odds of default increases by 17%. As the average monthly payments decreases the odds of default increases from 24% to 114% (see odds ratio of AvgPMT_0_910 to AvgPMT_1750_3333). As the number of delinquencies increase beyond 3, the odds of defaulting increases almost 3 times. The lower levels of standard deviations of bill amounts have surprisingly higher odds of default (27%), this could be potentially interpreted as customers only paying the interest and leaving the principal amount on their credit card. 
 
 ```{r}
+registerDoSEQ()
+
 caret::train(x = trainProc[,which(names(trainProc) %in% Preds)], 
                   y = y_trainProc,
                   method = "glm",
@@ -1510,11 +1537,25 @@ caret::train(x = trainProc[,which(names(trainProc) %in% Preds)],
       
                   ) -> logitSelectedPred
 
+#summary(logitSelectedPred$finalModel) %>% pander()
 
 
-getPerformance(trainProc[,which(names(trainProc) %in% Preds)],validProc[,which(names(validProc) %in% Preds)],y_trainProc,validY,logitSelectedPred$finalModel)
+broom::tidy(logitSelectedPred$finalModel) %>% 
+  mutate(oddsRatio = exp(estimate)) %>% 
+  kable("latex",digits = 4,caption = "logistic regression coefficients and odds- ratio")
 ```
 
+#### 8.1.1 Logistic regression model performance
+
+The sensitivity of the model is poor at 15%. In the previous sections, it was seen xgBoost and lasso regression had close to 30% sensitivity. The F1 score of the model is 0.27. 
+
+```{r}
+getPerformance(trainProc[,which(names(trainProc) %in% Preds)],validProc[,which(names(validProc) %in% Preds)],y_trainProc,validY,logitSelectedPred$finalModel,title = "Logit model with selected features") -> logitSelectedPredPerf
+```
+
+#### 8.1.2 Improved logistic regression model
+
+The statistically insignificant features are now removed and the logistic regression model is re-fit. The sensitivity improves by a 1% point. 
 
 ```{r}
 ctrl <- trainControl(method = "cv",
@@ -1536,10 +1577,12 @@ caret::train(x = df[,PredsLogit],
       
                   ) -> logitSelectedPred2
 
-getPerformance(df[,PredsLogit],df_valid[,PredsLogit],y_trainProc,validY,logitSelectedPred2$finalModel)
+getPerformance(df[,PredsLogit],df_valid[,PredsLogit],y_trainProc,validY,logitSelectedPred2$finalModel, title = "Logit refit") -> logitSelectedPredPerf2
 
 ```
-## Naive Bayes 
+### 8.2 Naive Bayes 
+
+Though our predictor space contains features that are not independant of each other, a Naive Bayes classifier is fit to the data to evaluate its performance. The AUC is comparable to the rest of the models, but Naive Bayes' Sensitivity is as high as the xgBoost's model with a high specificity. The F1 score is 0.5, much higher than all other models. 
 
 ```{r}
 search_grid <- expand.grid(
@@ -1557,13 +1600,15 @@ caret::train(x = df[,Preds],
       
                   ) -> nbSelectedPred
 
-plot(nbSelectedPred)
+#plot(nbSelectedPred)
 
-getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_valid) %in% 'DEFAULT')],y_trainProc,validY,nbSelectedPred)
+getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_valid) %in% 'DEFAULT')],y_trainProc,validY,nbSelectedPred, title = "Naive Bayes model Performance") -> nbPerf
 ```
 
 
-## Neural network
+## 8.3 Neural network
+
+A feed forward neural network with 1 input layer with as 3 hidden layers with drop out layers (rate of 10% drop out) after each hidden layer was chosen. With input layer having as many neurons as the number of chosen predictors and the output layer with a single neuron. All the hidden layers have ReLU activation and output layer has a sigmoid activation. The loss function that is to be minimized is the binary crossentropy. The model architecture is shown below.
 
 ```{r}
 library(keras)
@@ -1609,6 +1654,7 @@ model
 
 
 ```
+
 
 ```{r}
 set.seed(10)
