@@ -1616,90 +1616,91 @@ library(keras)
 y_train_nn <-  ifelse(y_trainProc == "yes",1,0)
 y_valid_nn <-  ifelse(validY=="yes",1,0)
 
-model <- keras_model_sequential() %>% 
-    # first hidden layer
-  layer_dense(units = 8,activation = "relu",input_shape = length(Preds)) %>% 
-    # add drop out layer
-  layer_dropout(rate = 0.1) %>% 
-  # second hidden layer
-  layer_dense(units = 4, activation = "relu") %>% 
-      # add drop out layer
-  layer_dropout(rate = 0.1) %>%
-  # third layer
-   layer_dense(units = 2, activation = "relu") %>% 
-      # add drop out layer
-  layer_dropout(rate = 0.1) %>%
-  # output layer
-  layer_dense(units = 1,activation = "sigmoid")
-
-# creating custome metric
-metric_auc <- custom_metric("auc",function(y_true,y_pred){
-  K <- backend()
-  y_true <- K$eval(y_true)
-  y_pred <- K$eval(y_pred)
-  roccurve <- roc(response = y_true, predictor = y_pred)
-  aucval <- pROC::auc(roccurve)
-  K$constant(aucval,'float64')
-})
-
-# compile the network
-model %>% 
-compile(
-  optimizer = 'adam',
-  loss = "binary_crossentropy",
-  metrics = c('accuracy')
-)
-
-model
+# model <- keras_model_sequential() %>% 
+#     # first hidden layer
+#   layer_dense(units = 8,activation = "relu",input_shape = length(Preds)) %>% 
+#     # add drop out layer
+#   layer_dropout(rate = 0.1) %>% 
+#   # second hidden layer
+#   layer_dense(units = 4, activation = "relu") %>% 
+#       # add drop out layer
+#   layer_dropout(rate = 0.1) %>%
+#   # third layer
+#    layer_dense(units = 2, activation = "relu") %>% 
+#       # add drop out layer
+#   layer_dropout(rate = 0.1) %>%
+#   # output layer
+#   layer_dense(units = 1,activation = "sigmoid")
+# 
+# # creating custome metric
+# metric_auc <- custom_metric("auc",function(y_true,y_pred){
+#   K <- backend()
+#   y_true <- K$eval(y_true)
+#   y_pred <- K$eval(y_pred)
+#   roccurve <- roc(response = y_true, predictor = y_pred)
+#   aucval <- pROC::auc(roccurve)
+#   K$constant(aucval,'float64')
+# })
+# 
+# # compile the network
+# model %>% 
+# compile(
+#   optimizer = 'adam',
+#   loss = "binary_crossentropy",
+#   metrics = c('accuracy')
+# )
+# 
+# model
 
 
 ```
 
 
 ```{r}
-set.seed(10)
-history <- model %>% 
-  fit(trainProcMat[,Preds],
-      y_train_nn,
-      epochs = 100,
-      batch_size = 30,
-      validation_data = list(validProcMat[,Preds],y_valid_nn))
+# set.seed(10)
+# history <- model %>% 
+#   fit(trainProcMat[,Preds],
+#       y_train_nn,
+#       epochs = 200,
+#       batch_size = 30,
+#       validation_data = list(validProcMat[,Preds],y_valid_nn))
 ```
 
 ```{r}
-y_train_pred_prob <- predict_proba(model,x = trainProcMat[,Preds]) %>% as.vector()
-y_train_pred_class <- predict_classes(model,x = trainProcMat[,Preds]) %>% as.vector()
-estimates_keras_tbl <- tibble(
-  truth      = y_trainProc,
-  estimate   = as.factor(y_train_pred_class) %>% fct_recode(yes = "1",no = "0"),
-  class_prob = y_train_pred_prob
-)
-
-y_valid_pred_prob <- predict_proba(model,x = validProcMat[,Preds]) %>% as.vector()
-y_valid_pred_class <- predict_classes(model,x = validProcMat[,Preds]) %>% as.vector()
-estimates_valid <- tibble(
-  truth      = validY,
-  estimate   = as.factor(y_valid_pred_class) %>% fct_recode(yes = "1",no = "0"),
-  class_prob = y_valid_pred_prob
-)
-
-estimates_keras_tbl %>% yardstick::roc_auc(truth, class_prob)
-estimates_valid %>% yardstick::roc_auc(truth, class_prob)
-
- estimates_keras_tbl %>% f_meas(truth, estimate, beta = 1)
- estimates_valid %>% f_meas(truth, estimate, beta = 1)
+# y_train_pred_prob <- predict_proba(model,x = trainProcMat[,Preds]) %>% as.vector()
+# y_train_pred_class <- predict_classes(model,x = trainProcMat[,Preds]) %>% as.vector()
+# estimates_keras_tbl <- tibble(
+#   truth      = y_trainProc,
+#   estimate   = as.factor(y_train_pred_class) %>% fct_recode(yes = "1",no = "0"),
+#   class_prob = y_train_pred_prob
+# )
+# 
+# y_valid_pred_prob <- predict_proba(model,x = validProcMat[,Preds]) %>% as.vector()
+# y_valid_pred_class <- predict_classes(model,x = validProcMat[,Preds]) %>% as.vector()
+# estimates_valid <- tibble(
+#   truth      = validY,
+#   estimate   = as.factor(y_valid_pred_class) %>% fct_recode(yes = "1",no = "0"),
+#   class_prob = y_valid_pred_prob
+# )
+# 
+# estimates_keras_tbl %>% yardstick::roc_auc(truth, class_prob)
+# estimates_valid %>% yardstick::roc_auc(truth, class_prob)
+# 
+#  estimates_keras_tbl %>% f_meas(truth, estimate, beta = 1)
+#  estimates_valid %>% f_meas(truth, estimate, beta = 1)
+#  
+#  estimates_keras_tbl %>% metrics(truth, estimate)
+#  estimates_valid %>% metrics(truth, estimate)
+#  
+#  tibble(
+#   precision = estimates_keras_tbl %>% precision(truth, estimate),
+#   recall    = estimates_keras_tbl %>% recall(truth, estimate)
+# )
+#  tibble(
+#   precision = estimates_valid %>% precision(truth, estimate),
+#   recall    = estimates_valid %>% recall(truth, estimate)
+# )
  
- estimates_keras_tbl %>% metrics(truth, estimate)
- estimates_valid %>% metrics(truth, estimate)
- 
- tibble(
-  precision = estimates_keras_tbl %>% precision(truth, estimate),
-  recall    = estimates_keras_tbl %>% recall(truth, estimate)
-)
- tibble(
-  precision = estimates_valid %>% precision(truth, estimate),
-  recall    = estimates_valid %>% recall(truth, estimate)
-)
 ```
 
 ```{r}
@@ -1732,37 +1733,160 @@ auc_roc <- R6::R6Class("ROC",
                              }    
                        ))
 
-auc_roc_metric <- auc_roc$new(training = list(trainProcMat[,Preds], y_train_nn), validation = list(validProcMat[,Preds],y_valid_nn))
+# auc_roc_metric <- auc_roc$new(training = list(trainProcMat[,Preds], y_train_nn), validation = list(validProcMat[,Preds],y_valid_nn))
 
-tensorboard("logs/run_b")
+# tensorboard("logs/run_f")
 
-history2 <- model %>% 
-  fit(trainProcMat[,Preds],
-      y_train_nn,
-      epochs = 100,
-      batch_size = 30,
-      validation_data = list(validProcMat[,Preds],y_valid_nn),
-      callbacks = list(auc_roc_metric,callback_tensorboard("logs/run_b",histogram_freq = 1,write_graph = T,write_grads = T)))
+# history2 <- model %>% 
+#   fit(trainProcMat[,Preds],
+#       y_train_nn,
+#       epochs = 100,
+#       batch_size = 30,
+#       validation_data = list(validProcMat[,Preds],y_valid_nn),
+#       callbacks = list(auc_roc_metric,callback_tensorboard("logs/run_b",histogram_freq = 1,write_graph = T,write_grads = T)))
  
 ```
 
 ```{r}
-estimates_keras_tbl %>% yardstick::roc_auc(truth, class_prob)
-estimates_valid %>% yardstick::roc_auc(truth, class_prob)
+# estimates_keras_tbl %>% yardstick::roc_auc(truth, class_prob)
+# estimates_valid %>% yardstick::roc_auc(truth, class_prob)
+# 
+#  estimates_keras_tbl %>% f_meas(truth, estimate, beta = 1)
+#  estimates_valid %>% f_meas(truth, estimate, beta = 1)
+#  
+#  estimates_keras_tbl %>% metrics(truth, estimate)
+#  estimates_valid %>% metrics(truth, estimate)
+#  
+#  tibble(
+#   precision = estimates_keras_tbl %>% precision(truth, estimate),
+#   recall    = estimates_keras_tbl %>% recall(truth, estimate)
+# )
+#  tibble(
+#   precision = estimates_valid %>% precision(truth, estimate),
+#   recall    = estimates_valid %>% recall(truth, estimate)
+# )
+```
 
- estimates_keras_tbl %>% f_meas(truth, estimate, beta = 1)
- estimates_valid %>% f_meas(truth, estimate, beta = 1)
- 
- estimates_keras_tbl %>% metrics(truth, estimate)
- estimates_valid %>% metrics(truth, estimate)
- 
- tibble(
-  precision = estimates_keras_tbl %>% precision(truth, estimate),
-  recall    = estimates_keras_tbl %>% recall(truth, estimate)
+```{r}
+# take the train data and set it for neural network
+recipes::recipe(DEFAULT ~ ., data = trainProc) -> recep
+#recep <- recipes::step_mutate(recep,Avg_BILL_Amt = ifelse(Avg_BILL_Amt <= 0, 0.0001, Avg_BILL_Amt))
+#recep %<>% recipes::step_YeoJohnson(Avg_BILL_Amt)
+#recep %<>% recipes::step_scale(Avg_BILL_Amt)
+recep %<>% 
+  recipes::step_dummy(EDUCATION)
+
+recep %<>% 
+  recipes::step_dummy(MARRIAGE)
+
+recipes::prep(recep) -> finalrecep
+recipes::bake(finalrecep,trainProc) -> trainProc2
+
+recipes::bake(finalrecep,validProc)-> validProc2
+
+trainProc2 %>% 
+  #select(-ppk,-DEFAULT) %>% 
+  mutate_if(is.factor, function(x) as.numeric(x)-1) %>% 
+  as.matrix() -> trainProcMat2
+
+validProc2 %>% 
+  #select(-ppk,-DEFAULT) %>% 
+  mutate_if(is.factor, function(x) as.numeric(x)-1) %>% 
+  as.matrix() -> validProcMat2
+
+
+```
+
+
+```{r}
+model2 <- keras_model_sequential() %>% 
+    # first hidden layer
+  layer_dense(units = 8,activation = "relu",input_shape = ncol(trainProcMat2)-1) %>% 
+    # add drop out layer
+  layer_dropout(rate = 0.1) %>% 
+  # second hidden layer
+  layer_dense(units = 4, activation = "relu") %>% 
+      # add drop out layer
+  layer_dropout(rate = 0.1) %>%
+  # third layer
+   layer_dense(units = 2, activation = "relu") %>% 
+      # add drop out layer
+  layer_dropout(rate = 0.1) %>%
+  # output layer
+  layer_dense(units = 1,activation = "sigmoid")
+
+# creating custome metric
+metric_auc <- custom_metric("auc",function(y_true,y_pred){
+  K <- backend()
+  y_true <- K$eval(y_true)
+  y_pred <- K$eval(y_pred)
+  roccurve <- roc(response = y_true, predictor = y_pred)
+  aucval <- pROC::auc(roccurve)
+  K$constant(aucval,'float64')
+})
+
+# compile the network
+model2 %>% 
+compile(
+  optimizer = 'adam',
+  loss = "binary_crossentropy",
+  metrics = c('accuracy')
 )
- tibble(
-  precision = estimates_valid %>% precision(truth, estimate),
-  recall    = estimates_valid %>% recall(truth, estimate)
+
+model2
+```
+
+```{r}
+auc_roc_metric <- auc_roc$new(training = list(trainProcMat2[,-27], y_train_nn), validation = list(validProcMat2[,-27], y_valid_nn))
+#auc_roc_metric <- auc_roc$new(training = list(trainProcMat[,Preds], y_train_nn), validation = list(validProcMat[,Preds],y_valid_nn))
+tensorboard("logs/run_z")
+
+history3 <- model2 %>%
+  fit(trainProcMat2[,-27],
+      y_train_nn,
+      epochs = 100,
+      batch_size = 30,
+      validation_data = list(validProcMat2[,-27],y_valid_nn),
+      callbacks = list(auc_roc_metric,callback_tensorboard("logs/run_z",histogram_freq = 1,write_graph = T,write_grads = T)))
+
+# history3 <- model2 %>% 
+#   fit(trainProcMat2[,-27],
+#       y_train_nn,
+#       epochs = 50,
+#       batch_size = 30,
+#       validation_data = list(validProcMat2[,-27],y_valid_nn))
+
+
+y_train_pred_prob2 <- predict_proba(model2,x = trainProcMat2[,-27]) %>% as.vector()
+y_train_pred_class2 <- predict_classes(model2,x = trainProcMat2[,-27]) %>% as.vector()
+
+
+y_valid_pred_prob2 <- predict_proba(model2,x = validProcMat2[,-27]) %>% as.vector()
+y_valid_pred_class2 <- predict_classes(model2,x = validProcMat2[,-27]) %>% as.vector()
+
+
+
+estimates_keras_tbl2 <- tibble(
+  truth      = y_trainProc,
+  estimate   = as.factor(y_train_pred_class2) %>% fct_recode(yes = "1",no = "0"),
+  class_prob = y_train_pred_prob2
 )
+
+confusionMatrix(estimates_keras_tbl2$estimate,estimates_keras_tbl2$truth, positive = "yes") -> trainNNConf
+
+
+estimates_valid2 <- tibble(
+  truth      = validY,
+  estimate   = as.factor(y_valid_pred_class2) %>% fct_recode(yes = "1",no = "0"),
+  class_prob = y_valid_pred_prob2
+)
+
+confusionMatrix(estimates_valid2$estimate,estimates_valid2$truth, positive = "yes") -> validNNConf
+
+# estimates_keras_tbl2 %>% yardstick::roc_auc(truth, class_prob)
+# estimates_valid2 %>% yardstick::roc_auc(truth, class_prob)
+
+plot(history3)+ggtitle("Neural Network training and validation statistics") + theme_bw()
+
 ```
 
