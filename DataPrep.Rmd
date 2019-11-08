@@ -10,6 +10,8 @@ header-includes:
 - \usepackage{pdflscape}
 - \newcommand{\blandscape}{\begin{landscape}}
 - \newcommand{\elandscape}{\end{landscape}}
+- \usepackage{setspace}\doublespacing
+- \usepackage{float}
 ---
 
 ```{r setup, include=FALSE}
@@ -26,22 +28,9 @@ This paper discusses the various modeling approaches to predict customers defaul
   1. X % increase in monthly bill for a customer paying bills at a rate of y% of the monthly bill has Z% increased risk compared to average customer.
   2. 
 
-# 2. Executive Summary (DRAFT)
-
-Key Insights as of 11/2:
-
-1. One standard deviation increase in Bill amount increases odds of default by 11%
-2. Increased balance over 6 months on credit card increases odds of default by 7%. 
-3. As the average monthly payments decreases the odds of default increases from 24% to 114%, see section 8.1
-
-Next Steps:
-
-1. Calculate KPI % Value at Risk identified. Value At Risk identified by model divided by actual Value at Risk.
-2. Use the KPI as additional metric for model selection.
-3. Create code for ensemble of models.
 
 
-# 3. Data
+# 2. Data
 
 Data are available for 30,000 customers spanning between April 2005 and September 2005. The description of the data are shown in Table 1 below. Table 2 and Table 3 show the general summary of the data. Upon inspection of the data summaries, there were data quality issues identified, that are discussed in the following section.
 
@@ -215,7 +204,7 @@ creditdata %>%
 ```
 
 
-# 4. Feature Engineering
+# 3. Feature Engineering
 
 Table 5 shows the features that are derived from the data along with their name and calculation method. The AGE and ppk (the distance between credit limit and average bill in units of 3 time standard deviations of bill amounts) variables are continuous variables that are binned using Weights Of Evidence (WOE) method.
 
@@ -781,7 +770,6 @@ Payments as a ratio of bill amounts, average payment amounts, continuous decreas
 Figure 1 in section 4 shows relatively higher chances of defaulting in the early ages (21-24) and in the age group past mid-life 45 years and above. The increased chances in default past mid-life may be potentially attributed to loss in employment and or health related events in life.
 
 
-\newpage
 
 ## 5.7 Effect of Gender, Education and Marital Status
 
@@ -795,7 +783,7 @@ Chi-squared tests show gender, education and marital status are significant. As 
 
 
 
-```{r GenderEduMS,fig.cap = "GENDER,EDUCATION & MARITAL STATUS' effect on DEFAULT",fig.pos='asis',fig.height=4,fig.show='asis'}
+```{r GenderEduMS,fig.cap = "GENDER,EDUCATION & MARITAL STATUS' effect on DEFAULT",fig.pos='asis',fig.height=3.5,fig.show='asis'}
 lattice::barchart(prop.table(table(train$SEX,train$DEFAULT)),ylab = list(label ="SEX",cex = 0.75),scales = list(x = list(cex =0.5)),xlab = list(cex = 0.75)) -> bp1
 lattice::barchart(prop.table(table(train$EDUCATION,train$DEFAULT)),grid=T,ylab = list(label ="EDUCATION",cex = 0.75),scales = list(cex = 0.5),xlab = list(cex = 0.75)) -> bp2
 lattice::barchart(prop.table(table(train$MARRIAGE,train$DEFAULT)),grid=T,ylab = list(label="MARRIAGE",cex=0.75),scales = list(cex = 0.5),xlab = list(cex = 0.75)) -> bp3
@@ -827,7 +815,7 @@ table(train$DEFAULT,train$SEX) -> SEXtbl
 prop.table(SEXtbl) %>% 
   data.frame() %>% rename("SEX" = Var1, "DEFAULT" = Var2) %>% 
   kable("latex", booktabs = T,caption = "GENDER effect on DEFAULT - ChiSq test",digits = 2) %>% 
-  kable_styling(latex_options = "hold_position",font_size = 7)
+  kable_styling(latex_options = "hold_position",font_size = 6)
 chisq.test(SEXtbl) %>% pander()
 ```
 
@@ -836,10 +824,11 @@ table(train$DEFAULT,train$EDUCATION) -> EDUtbl
 prop.table(EDUtbl) %>% 
   data.frame() %>% rename("EDUCATION" = Var1, "DEFAULT" = Var2) %>% 
   kable("latex", booktabs = T,caption = "EDUCATION effect on DEFAULT - ChiSq test",digits = 2) %>% 
-  kable_styling(latex_options = "hold_position",font_size = 7)
+  kable_styling(latex_options = "hold_position",font_size = 6)
 chisq.test(EDUtbl) %>% pander()
 ```
 
+\newpage
 
 ```{r}
 
@@ -847,12 +836,13 @@ table(train$DEFAULT,train$MARRIAGE) -> MARtbl
 prop.table(MARtbl) %>% 
   data.frame() %>% rename("EDUCATION" = Var1, "DEFAULT" = Var2) %>% 
   kable("latex", booktabs = T,caption = "Marital Status' effect on DEFAULT - ChiSq test",digits = 2) %>% 
-  kable_styling(latex_options = "hold_position",font_size = 7)
+  kable_styling(latex_options = "hold_position",font_size = 6)
+panderOptions('graph.fontsize',7)
 chisq.test(MARtbl) %>% pander()
 
 ```
 
-\newpage
+
 
 ## 5.8 Model based EDA
 
