@@ -1,4 +1,15 @@
-getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", rowNames = c("train","valid"),cutoff = 0.5, title = "", modelname =""){
+getPerformance <- function(trainX,
+                           validX,
+                           trainY,
+                           validY,
+                           model,
+                           positive = "yes", 
+                           rowNames = c("train","valid"),
+                           cutoff = 0.5, 
+                           title = "",
+                           modelname ="",
+                           trainBILL = NA,
+                           validBILL = NA){
   
   # mertrics to be used
   # 1. Accuracy, 2. Sensitivity, 3. Specificty 4. NIV, AUC
@@ -21,6 +32,17 @@ getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", 
     
     train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
     valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
+    if(!is.na(trainBILL) & !is.na(validBILL)){
+      trainVar <- sum(as.vector(predict(model,trainX,type = "prob")[,"yes"]) * ifelse(trainBILL<=0,0,trainBILL))
+      validVar <- sum(as.vector(predict(model,validX,type = "prob")[,"yes"]) * ifelse(validBILL<=0,0,validBILL))
+      ActualVAR_train <- sum(ifelse(trainY=='yes',1,0)*ifelse(trainBILL<=0,0,trainBILL))
+      ActualVAR_valid <- sum(ifelse(validY=='yes',1,0)*ifelse(validBILL<=0,0,validBILL))
+      recoveredVAR_train <- trainVar/ActualVAR_train
+      recoveredVAR_valid <- validVar/ActualVAR_valid
+    }else{
+      recoveredVAR_train = NA
+      recoveredVAR_valid = NA
+    }
     
   } else if(class(model) == "train"){
     
@@ -29,12 +51,37 @@ getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", 
     train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
     valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
     
+    if(!is.na(trainBILL) & !is.na(validBILL)){
+      trainVar <- sum(as.vector(predict(model,trainX,type = "prob")[,"yes"]) * ifelse(trainBILL<=0,0,trainBILL))
+      validVar <- sum(as.vector(predict(model,validX,type = "prob")[,"yes"]) * ifelse(validBILL <= 0, 0, validBILL))
+      ActualVAR_train <- sum(ifelse(trainY=='yes',1,0)*ifelse(trainBILL <= 0, 0, trainBILL))
+      ActualVAR_valid <- sum(ifelse(validY=='yes',1,0)*ifelse(validBILL <= 0, 0 , validBILL))
+      recoveredVAR_train <- trainVar/ActualVAR_train
+      recoveredVAR_valid <- validVar/ActualVAR_valid
+    }else{
+      recoveredVAR_train = NA
+      recoveredVAR_valid = NA
+    }
+    
+    
   }else{
     trainPred <- as.factor(ifelse(predict(model,trainX) > cutoff, "yes", "no"))
     validPred <- as.factor(ifelse(predict(model,validX) > cutoff, "yes","no"))
     
     train.roc <- roc(response = trainY, predictor = predict(model,trainX))
     valid.roc <- roc(response = validY, predictor = predict(model,validX))
+    if(!is.na(trainBILL) & !is.na(validBILL)){
+      trainVar <- sum(as.vector(predict(model,trainX,type = "response")) * ifelse(trainBILL <= 0 , 0 , trainBILL))
+      validVar <- sum(as.vector(predict(model,validX,,type = "response"))* ifelse(validBILL<=0,0,validBILL))
+      ActualVAR_train <- sum(ifelse(trainY=='yes',1,0)*ifelse(trainBILL <= 0, 0 , trainBILL))
+      ActualVAR_valid <- sum(ifelse(validY=='yes',1,0)*ifelse(validBILL <= 0, 0, validBILL))
+      recoveredVAR_train <- trainVar/ActualVAR_train
+      recoveredVAR_valid <- validVar/ActualVAR_valid
+    }else{
+      recoveredVAR_train = NA
+      recoveredVAR_valid = NA
+    }
+    
   }
   
   
@@ -62,7 +109,9 @@ getPerformance <- function(trainX,validX,trainY,validY,model, positive = "yes", 
   return(list(Perf = PerformanceMeasures,
               Plots = recordPlot(),
               conftbltrain = trainConfusion$table,
-              conftblvalid = testConfusion$table))
+              conftblvalid = testConfusion$table,
+              recoveredVAR_train = recoveredVAR_train,
+              recoveredVAR_valid = recoveredVAR_valid))
   
   
 }

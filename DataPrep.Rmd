@@ -869,6 +869,7 @@ The WOE methods would be used to check or corroborate the decision trees and exp
 set.seed(10)
 
 valid <- creditdata %>% filter(validate == 1) %>% select(!!SelectedFeat,DEFAULT)
+test <- creditdata %>% filter(test==1) %>% select(!!SelectedFeat,DEFAULT)
 
 library(doParallel)
 cl <- makePSOCKcluster(5)
@@ -951,7 +952,7 @@ gridExtra::grid.arrange(pymtratio,avgpymt,stdbillplt,p3,ncol = 2)
 `r figr('model1', TRUE, type="Figure")` shows the performance metrics of the decision tree model in classifying the defaulters. The model has F1 score of 0.45 and 0.39 for training and validation data sets respectively. The sensitivity of the model is 0.33 and 0.29 for training and validation set respectively. There is opportunity for improvement in capturing more of the defaulters.
 
 ```{r model1ROC, eval = F, fig.show='hold',fig.cap = "decision tree complexity tuning performance",fig.height=4,fig.pos="asis",fig.height=4}
-#getPerformance(x,xvalid,y,yvalid,rpartFit,title = "rpart decision tree - complexity cost tuning") -> rpartstats
+#getPerformance(x,xvalid,y,yvalid,rpartFit,title = "rpart decision tree - complexity cost tuning",trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1],validBILL = creditdata$BILL_AMT1[creditdata$data.group==2]) -> rpartstats
 ```
 
 ```{r model1,fig.cap = "model1 - decision tree cost complexity tuning"}
@@ -1704,6 +1705,7 @@ Though our predictor space contains features that are not independent of each ot
 
 #getPerformance(df[,-which(names(df) %in% 'DEFAULT')],df_valid[,-which(names(df_valid) %in% 'DEFAULT')],y_trainProc,validY,nbSelectedPred, title = "Naive Bayes model Performance") -> nbPerf
 # nbPerf$Plots
+#trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1],validBILL = creditdata$BILL_AMT1[creditdata$data.group==2]
 
 knitr::include_graphics('modelResults/model11.png',auto_pdf = T)
 ```
