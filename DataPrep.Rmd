@@ -44,7 +44,7 @@ library(kableExtra)
 library(matrixStats)
 library(OneR)
 source('getPerformance.R')
-load('checkpoint2_3.RData')
+load('checkpoint3.RData')
 #setting seed
 
 set.seed(10)
@@ -1761,7 +1761,7 @@ A feed forward neural network with 1 input layer and 3 hidden layers with drop o
 
 
 
-```{r}
+```{r,eval = F}
 library(keras)
 
 y_train_nn <-  ifelse(y_trainProc == "yes",1,0)
@@ -1958,21 +1958,21 @@ testProc2 %>%
 
 
 ```{r NNArch,fig.cap = "NN architecture",out.height="200px",out.height="200px"}
-model2 <- keras_model_sequential() %>%
-    # first hidden layer
-  layer_dense(units = 8,activation = "relu",input_shape = ncol(trainProcMat2)-1) %>%
-    # add drop out layer
-  layer_dropout(rate = 0.1) %>%
-  # second hidden layer
-  layer_dense(units = 4, activation = "relu") %>%
-      # add drop out layer
-  layer_dropout(rate = 0.1) %>%
-  # third layer
-   layer_dense(units = 2, activation = "relu") %>%
-      # add drop out layer
-  layer_dropout(rate = 0.1) %>%
-  # output layer
-  layer_dense(units = 1,activation = "sigmoid")
+# model2 <- keras_model_sequential() %>%
+#     # first hidden layer
+#   layer_dense(units = 8,activation = "relu",input_shape = ncol(trainProcMat2)-1) %>%
+#     # add drop out layer
+#   layer_dropout(rate = 0.1) %>%
+#   # second hidden layer
+#   layer_dense(units = 4, activation = "relu") %>%
+#       # add drop out layer
+#   layer_dropout(rate = 0.1) %>%
+#   # third layer
+#    layer_dense(units = 2, activation = "relu") %>%
+#       # add drop out layer
+#   layer_dropout(rate = 0.1) %>%
+#   # output layer
+#   layer_dense(units = 1,activation = "sigmoid")
 # 
 # # creating custome metric
 # metric_auc <- custom_metric("auc",function(y_true,y_pred){
@@ -1985,12 +1985,12 @@ model2 <- keras_model_sequential() %>%
 # })
 # 
 # # compile the network
-model2 %>%
-compile(
-  optimizer = 'adam',
-  loss = "binary_crossentropy",
-  metrics = c('accuracy')
-)
+# model2 %>%
+# compile(
+#   optimizer = 'adam',
+#   loss = "binary_crossentropy",
+#   metrics = c('accuracy')
+# )
 knitr::include_graphics('modelResults/NNarch.png',auto_pdf = T)
 ```
 
@@ -2087,7 +2087,7 @@ plot(history3)+ggtitle("Neural Network training and validation statistics") + th
 
 ```
 
-```{r NNPerf,fig.cap = "model 12 - NNeural network model performance"}
+```{r NNPerf,fig.cap = "model 12 - NNeural network model performance",out.width='350px',out.height='300px'}
 knitr::include_graphics('modelResults/model12.png',auto_pdf = T)
 ```
 
