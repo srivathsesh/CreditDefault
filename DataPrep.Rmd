@@ -12,6 +12,10 @@ header-includes:
 - \newcommand{\elandscape}{\end{landscape}}
 - \usepackage{setspace}\doublespacing
 - \usepackage{float}
+includes:
+  in_header:header.tex
+  
+
 ---
 
 ```{r setup, include=FALSE}
@@ -152,7 +156,7 @@ skimr::skim_to_wide(creditdata) %>%
 
 ```
 
-## 3.1 Data Issues
+## 2.1 Data Issues
 
 1. Table 2 shows the variable $EDUCATION$ to have 7 possible values, while the dictionary in table 1 shows us expect 4 possible values. The values 0,5 and 6 would be assigned to a category "unknown", coded as 9.
 
@@ -188,7 +192,7 @@ validVAR <- VARs$VAR[VARs$data.group == 2]
 testVAR <- VARs$VAR[VARs$data.group == 3]
 ```
 
-## 3.2 Data Splitting
+## 2.2 Data Splitting
 
 The data was separated into three groups for model training, validation and testing purposes. The number of customers in each of these groups are shown below in table 4.
 
@@ -204,7 +208,7 @@ creditdata %>%
 ```
 
 
-# 4. Feature Engineering
+# 3. Feature Engineering
 
 Table 5 shows the features that are derived from the data along with their name and calculation method. The AGE and ppk (the distance between credit limit and average bill in units of 3 time standard deviations of bill amounts) variables are continuous variables that are binned using Weights Of Evidence (WOE) method.
 
@@ -631,7 +635,7 @@ table(creditdata$DEFAULT,creditdata$payFlag)
 chisq.test(table(creditdata$DEFAULT,creditdata$payFlag))
 ```
 
-## 4.1 Data Quality of Engineered Features
+## 3.1 Data Quality of Engineered Features
 
 The use of very small values like a penny when denominator dollar amounts are 0 prevented the feature from going to an infinite value.Table 6 and 7 Shows the summary of the engineered features.
 
@@ -659,7 +663,7 @@ creditdata %>%
 
 ```
 
-# 5. Exploratory Data Analysis (EDA).
+# 4. Exploratory Data Analysis (EDA).
 
 In this section the training data are analyzed to explore potential relationships between the predictor and propensity of default. Table 8 shows the distribution of the defaulting customers among the 15180 customers.
 
@@ -671,7 +675,7 @@ data.frame(prop.table(table(train$DEFAULT))) %>%
   kable_styling(latex_options = "hold_position")
 ```
 
-## 5.1 Magnitude of revolving credit
+## 4.1 Magnitude of revolving credit
 
 It is hypothesized that the magnitude of revolving credit is a reflection of income of customers and income has an effect on credit card default. There is no evidence of magnitude of revolving credit or income having an influence on default. In instances where either the payment or the bill amount were $<=0$ the value was assumed to be one-tenth of a New Taiwan(NT) penny. `r figr('marginalPlot', TRUE, type="Figure")` shows the log of the amounts for easier visualization. 
 
@@ -690,7 +694,7 @@ mp
 
 
 
-## 5.2 Past Delinquencies in payment
+## 4.2 Past Delinquencies in payment
 
 Here the frequency of delinquency (how often customers are delinquent) in payments' effect on default is explored. It is surprising that there are customers who were not late on payment but were marked default. Its likely those customers though were not late, might have paid less than the minimum due. The second panel in the plot below explores the continued delinquency's effect on default. The higher total months late associates to increased odds of defaulting (thicker tails in the density plot). The weights of evidence plot on total & maximum delinquencies in `r figr('Delinquencies', TRUE, type="Figure")` shows increased chances of defaulting when total delinquency is past 1 month. This potentially indicates that the bank pardon's a single late payment.
 
@@ -720,7 +724,7 @@ gridExtra::grid.arrange(p1,p2,p3,p5, ncol = 2)
 
 ```
 
-## 5.3 Utilization of credit limit
+## 4.3 Utilization of credit limit
 
 A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 4, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is to be noted that there is an increase in the odds of default for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of `r figr('ppkUtilAge', TRUE, type="Figure")` . It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization, 
 
@@ -747,7 +751,7 @@ chisq.test(utilflagtbl) %>% pander()
 ```
 
 
-## 5.4 Effect of balances
+## 4.4 Effect of balances
 
 The effect of increased balances is quantified in the tables 11 & 12 below. The customers whose balances increases over time (month after month) are flagged and analyzed for the odds in default. The chi squared test of independence show there is a statistical significance due to increasing credit card balance over time. 
 
@@ -761,17 +765,17 @@ chisq.test(balflagtbl) %>% pander()
 ```
 
 
-## 5.5 Effect of decreased payments
+## 4.5 Effect of decreased payments
 
 Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistically significant results when explored graphically using density plots. However, in the section 5.8.1.1, decision trees help bring out signal from payment variables. The influence of payments are discussed in section 5.8.1.2 below.
 
-## 5.6 Effect of Age
+## 4.6 Effect of Age
 
 Figure 1 in section 4 shows relatively higher chances of defaulting in the early ages (21-24) and in the age group past mid-life 45 years and above. The increased chances in default past mid-life may be potentially attributed to loss in employment and or health related events in life.
 
 
 
-## 5.7 Effect of Gender, Education and Marital Status
+## 4.7 Effect of Gender, Education and Marital Status
 
 Effect of SEX on default is explored. In the data, 60% of the samples are of females (coded as 2). It can be seen from `r figr('GenderEduMS', TRUE, type="Figure")` that proportions of defaulters are in each group are comparable (25% for males and 21% for females). However the chi-squared test shows the difference in the proportions as statistically significant. This may be likely due to the sensitivity to high number of samples in the training set. The importance of SEX in predicting the defaulters is explored in the model based EDA section below. 
 
@@ -844,7 +848,7 @@ chisq.test(MARtbl) %>% pander()
 
 
 
-## 5.8 Model based EDA
+## 4.8 Model based EDA
 
 In this section, two methods are employed to gain more insights on the effects of the predictor variables on chances of default. 
 
@@ -852,11 +856,11 @@ In this section, two methods are employed to gain more insights on the effects o
 - Simple logistic regression.
 
 
-### 5.8.1 Tree based methods.
+### 4.8.1 Tree based methods.
 
 Multivariate decision tree method, where a tree is grown using all predictor variables in the model. Here a generalizable tree is obtained by using two different methods of pruning a) Using a cost complexity parameter on the leaves b) Depth of the tree. Decision trees are fit on 10 fold cross validated samples to arrive at a generalizable decision tree. 
 
-#### 5.8.1.1 Decision tree with complexity parameter tuning
+#### 4.8.1.1 Decision tree with complexity parameter tuning
 
 The best tuning for cost parameter based on 10 fold cross validation was 0.015. `r figr('rpart1', TRUE, type="Figure")` shows the tuning and the importance of the various predictors. It is to be noted that count of delinquencies (DLQ_Count) and maximum delinquencies (DLQ_Max) were removed from the predictors list for the model shown below. When included in the model, all the trees zero in on DLQ_Total, DLQ_Count and DLQ_Max leaving very little signal from other predictors to come out. 
 
@@ -864,7 +868,7 @@ It can be seen that apart from total delinquencies (DLQ_Total) the standard devi
 
 The WOE methods would be used to check or corroborate the decision trees and explore opportunities for further engineering these variables. 
 
-```{r rpart1, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot",fig.pos='asis',fig.height = 3}
+```{r rpart1, eval = T,fig.cap = "left:Tuning results of Cost Complexity; right: variable importance plot",fig.pos='asis',fig.height = 3.5}
 
 set.seed(10)
 
@@ -899,7 +903,7 @@ rpartFit <- caret::train(x = x,
 stopCluster(cl)
 
 
-gridExtra::grid.arrange(plot(rpartFit),plot(varImp(rpartFit),tl.cex = 5),ncol = 2)
+gridExtra::grid.arrange(plot(rpartFit),plot(varImp(rpartFit),top = 15),ncol = 2)
 
 ```
 
@@ -950,9 +954,9 @@ gridExtra::grid.arrange(pymtratio,avgpymt,stdbillplt,p3,ncol = 2)
 ```
 
 
-##### 5.8.1.1.1 Performance of Decision tree with complexity parameter tuning
+##### 4.8.1.1.1 Performance of Decision tree with complexity parameter tuning
 
-`r figr('model1', TRUE, type="Figure")` shows the performance metrics of the decision tree model in classifying the defaulters. The model has F1 score of 0.45 and 0.39 for training and validation data sets respectively. The sensitivity of the model is 0.33 and 0.29 for training and validation set respectively. There is opportunity for improvement in capturing more of the defaulters.
+`r figr('model1', TRUE, type="Figure")` shows the performance metrics of the decision tree model in classifying the defaulters. The model has F1 score of 0.45,0.39 and 0.4 for training, validation and test data sets respectively. The sensitivity of the model is 0.33 and 0.29 for training and validation set respectively. There is opportunity for improvement in capturing more of the defaulters. Here another metric to measure the model performance is introduced; % Value At Risk recovered (%VAR recovered). It is the ratio of the total currency value the model identifies as at risk due to defaulting customers and the actual total currency value that has been defaulted on by defaulting customers. The % VAR when greater than 1, implies that model is identifying risk thats greater than actual, similary less than 1 indicates model identifying risk less than the actual. The model identifies risk 4%, 7% and 18% higher than actual for the training, validation and test data sets. 
 
 ```{r model1ROC, eval = F, fig.show='hold',fig.cap = "decision tree complexity tuning performance",fig.height=4,fig.pos="asis",fig.height=4}
 #getPerformance(x,xvalid,y,yvalid,rpartFit,title = "rpart decision tree - complexity cost tuning",trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1],validBILL = creditdata$BILL_AMT1[creditdata$data.group==3]) -> rpartstats
@@ -964,7 +968,7 @@ knitr::include_graphics('modelResults/model1.png')
 ```
 
 
-### 5.8.1.2 Decision tree with depth of tree tuning
+### 4.8.1.2 Decision tree with depth of tree tuning
 
 When constraining the tree building process on the depth of the tree, the contribution of total delinquencies is very high relative to the other predictor variables. `r figr('varImpDT', TRUE, type="Figure")` show the performance & variable importance of the decision tree. The interpretation is consistent with the tree built in above section. 
 
@@ -1020,15 +1024,15 @@ plot(prty,gp = gpar(fontsize = 7),
 
 ```
 
-`r figr('depthTree', TRUE, type="Figure")` shows the depth of tree tuned decision tree and  `r figr('model2', TRUE, type="Figure")` shows its performance. It's performance is identical to complexity tuned model. However the F1 score on the validation set is slightly better in this model. 
+`r figr('depthTree', TRUE, type="Figure")` shows the depth of tree tuned decision tree and  `r figr('model2', TRUE, type="Figure")` shows its performance. It's performance is identical to complexity tuned model. However the F1 score on the validation and test sets are slightly better in this model. The % VAR recovered metrics is within two percentage points compared to the tree tuned based on complexity parameter.
 
 ```{r model2,fig.cap = "model 2 - decision tree depth of tree tuning"}
 knitr::include_graphics('modelResults/model2.png')
 ```
 
-#### 5.8.1.3 Decision tree with one parameter at a time.
+#### 4.8.1.3 Decision tree with one parameter at a time.
 
-In this section, trees are built using only one parameter per model. The goal is to get a baseline or null model whose performance would be lower threshold for any complex model built in the following sections. The best single predictor model is using DLQ_Count with an accuracy of 80.23%. "No information Rate" is 77.4% (i.e a null model with no predictors). The DLQ_Count variable provides a gain of ~ 2.8 percentage points in accuracy. `r figr('oneR1', TRUE, type="Figure")` shows the summary of the result. `r figr('oneRPerf', TRUE, type="Figure")` shows the performance of one predictor decision tree, the performance is slightly better in terms of F1 score (0.44 on train and validation data) and AUC (67% and 68% in train and validation data sets respectively).
+In this section, trees are built using only one parameter per model. The goal is to get a baseline or null model whose performance would be lower threshold for any complex model built in the following sections. The best single predictor model is using DLQ_Count with an accuracy of 80.23%. "No information Rate" is 77.4% (i.e a null model with no predictors). The DLQ_Count variable provides a gain of ~ 2.8 percentage points in accuracy. `r figr('oneR1', TRUE, type="Figure")` shows the summary of the result. `r figr('oneRPerf', TRUE, type="Figure")` shows the performance of one predictor decision tree, the performance is slightly better in terms of F1 score (0.44 on train and validation data and 0.42 on test data) and AUC (67%,68% and 67% in train, validation and test data sets respectively). The model's overestimation of value at risk is in par with the multivariate decision trees discussed in the previous section.
 
 ```{r oneR1,fig.cap = "oneR decison tree summary", message = T,warning = F,out.width="300px",out.height="300px"}
 library(OneR)
@@ -1052,7 +1056,7 @@ knitr::include_graphics('modelresults/oner1.png')
 knitr::include_graphics('modelResults/model3.png')
 ```
 
-#### 5.8.1.4 Re-Engineer features
+#### 4.8.1.4 Re-Engineer features
 
 Based on the discoveries above, the following variables are discretized
 
@@ -1114,7 +1118,7 @@ valid2 <- creditdata %>% filter(validate == 1) %>% select(!!SelectedFeat2,DEFAUL
 levels(valid2$DEFAULT) <- c("no","yes")
 ```
 
-#### 5.8.1.5 Re-run of Decision tree with one parameter at a time
+#### 4.8.1.5 Re-run of Decision tree with one parameter at a time
 
 The one predictor decision trees are built again with re-engineered features. The results are identical from the previous run. The DLQ_Count variables is further discretized with a cut point of 3. The new feature is named $DLQ\_Count\_3\_X$. `r figr('oner2', TRUE, type="Figure")` shows the summary of the result.
 
@@ -1135,7 +1139,7 @@ knitr::include_graphics('modelresults/oner2.png')
 
 ```
 
-#### 5.8.1.6 Dropping highly correlated variables
+#### 4.8.1.6 Dropping highly correlated variables
 
 A filtering based method is used to determine redundant features to be removed for modeling purposes. The features $Max\_Bill\_Amt$, $DLQ\_Max$ ,$utilFlag$ and $MARRIAGE.2$ (marital status - single) were not adding new information to the predictor space due to their correlation with other variables. Hence they were removes from the predictor space. `r figr('correlations', TRUE, type="Figure")` shows correlations amongst the features. It must be noted that some categorical variables were converted to numeric to observe correlations. The results of such an analysis must be carefully interpreted. In this case categorical variables with 2 levels are compared with categorical variables with 2 levels (1 and 0) for determination of redundant information in the predictor space.
 
@@ -1197,7 +1201,7 @@ test2 %<>% select(-one_of(c(removeCols,'ppk')))
 ```
 
 
-### 5.8.2 Simple Logistic Regression model
+### 4.8.2 Simple Logistic Regression model
 
 The numerical variables (not the factor variables) in the predictor space was centered and scaled for ease of modeling and interpretation. A simple logistic regression model was fit. See Table 19 for table of coefficients and odds ratio. The model coefficients for most of the features are intuitive, for example the males have 12% more odds than females to default. For one standard deviation increase in average utilization odds of default increases by 6%. Likewise, one standard deviation increase in average bill amount increases the odds for defaulting by 14%. Customers delinquent by 3 or more months have the odds increase by 2.75 times. Also with decreasing levels in the buckets of average payments, the odds of default increases. However, the odds of defaults 15 - 17% lower for lower payment to bill ratios, which is very counter intuitive. 
 
@@ -1234,9 +1238,9 @@ broom::tidy(logitmdl2$finalModel) %>%
   kable_styling(latex_options = "hold_position",font_size = 7)
 ```
 
-#### 5.8.2.1  Simple Logistic Regression model Performance
+#### 4.8.2.1  Simple Logistic Regression model Performance
 
-The performance table below shows an improved AUC than the single predictor decision trees, however the F1 statistic is poorer. `r figr('mdl4', TRUE, type="Figure")` shows the performance of the simple logistic regression model while the AUC shows an improvement of 77%, the model lacks sensitivity and has a poorer F1 score of 0.26 each for training and validation data sets.
+The performance table below shows an improved AUC than the single predictor decision trees, however the F1 statistic is poorer. `r figr('mdl4', TRUE, type="Figure")` shows the performance of the simple logistic regression model while the AUC shows an improvement of 77%, the model lacks sensitivity and has a poorer F1 score of 0.25,0.26 and 0.25 for training, validation and test data sets. The % VAR recovered of 100%, 102% and 115% for train,validation and test data sets are better than the previous models.
 
 ```{r,eval = F }
 #confusionMatrix(predict(logitmdl2),y_trainProc,positive = "yes")
@@ -1267,8 +1271,9 @@ levels(testY) <- c("no","yes")
 knitr::include_graphics('modelResults/model4.png',auto_pdf = T)
 ```
 
+\newpage
 
-# 6. Model based Feature Selection
+# 5. Model based Feature Selection
 
 In this section model based feature selection method is employed for better choosing the features for further modeling. Here the following strategies are used for feature selection
 
@@ -1287,7 +1292,7 @@ The importance of features in all the models are examined and features are selec
     
 
 
-## 6.1 Logistic model with stepwise feature selection
+## 5.1 Logistic model with stepwise feature selection
 
 Stepwise selection of predictors based on AIC values of a logistic regression was fit. The coefficients are listed in table 20 and the importance of features based on their coefficients is shown in `r figr('stpwise', TRUE, type="Figure")`
 
@@ -1323,7 +1328,7 @@ data.frame(Preds = rownames(varImp(glmLogit$finalModel)), Importance = varImp(gl
 
 ```
 
-### 6.1.1 Performance of stepwise logit model
+### 5.1.1 Performance of stepwise logit model
 
 The model though has a AUC of 77%, the sensitivity is 16% with F1 as 0.25 and 0.27 for train and validation data sets respectively. Different threshold probability cut off values to classify defaulting customers were explored, however 0.5 threshold had the maximum F1. The sensitivity of the model is poor at 0.16. `r figr('stpwiseperf', TRUE, type="Figure")` shows the performance statistics.
 
@@ -1343,7 +1348,7 @@ thdcal_glmLogit %>%
 ```
 
 
-## 6.2 Lasso regression
+## 5.2 Lasso regression
 
 The important predictors are more or less identical to the stepwise selection model above. The importance of features is shown in `r figr('lassoImp', TRUE, type="Figure")`
 
@@ -1376,9 +1381,9 @@ Importance %>% top_n(10) %>% ggplot(aes(x=fct_reorder(Pred,abs(Coef)), y = abs(C
 broom::tidy(glmnetLogit$finalModel)
 ```
 
-### 6.2.1 Lasso regression performance
+### 5.2.1 Lasso regression performance
 
-`r figr('lassoPerf', TRUE, type="Figure")` shows Lasso regression has made the best classifications so far. With Sensitivity at 33 % and 34% for train and validation data sets respectively. With a F1 score of 0.43 for both data sets. 
+`r figr('lassoPerf', TRUE, type="Figure")` shows Lasso regression has made the best classifications so far. With Sensitivity at 33 % and 34% for train and validation data sets respectively. With a F1 score of 0.43 for both data sets. The % VAR recovered is similar to that of stepwise logit model.
 
 ```{r lassoPerf,fig.cap = "Model 6 - Lasso regression performance"}
 # glmnetLogit.perf <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')] %>% data.matrix(),validProc[,-which(names(validProc) %in% 'DEFAULT')] %>% data.matrix(),y_trainProc,validY,glmnetLogit, title = "Lasso regression",validBILL = creditdata$BILL_AMT1[creditdata$data.group==3],trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1])
@@ -1393,9 +1398,9 @@ knitr::include_graphics('modelResults/model6.png',auto_pdf = T)
 ```
 
 
-## 6.3 Random forest 
+## 5.3 Random forest 
 
-Random forest methods were tuned with different predictors for each iteration. `r figr('rfimp', TRUE, type="Figure")` shows the tuning results and the top 20 important features. The threshold (probability cut off) to predict the positive class (defaulters) were tuned for the training data by optimizing it for the F1 score. While a threshold of 0.4 yielded the best result in the training data, it did not yield a significant improvement in the validation data. Hence the threshold was retained at its default of 0.5. `r figr('rfperf', TRUE, type="Figure")` shows the model over fit the training data with AUC as 1 and sensitivity of 0.96 and performed poorly on the validation data set relative to Lasso regression model.
+Random forest methods were tuned with different predictors for each iteration. `r figr('rfimp', TRUE, type="Figure")` shows the tuning results and the top 20 important features. The threshold (probability cut off) to predict the positive class (defaulters) were tuned for the training data by optimizing it for the F1 score. While a threshold of 0.4 yielded the best result in the training data, it did not yield a significant improvement in the validation data. Hence the threshold was retained at its default of 0.5. 
 
 ```{r rfimp,fig.cap = "Random forest, feature selection",fig.pos = "asis",fig.height=4, fig.pos="asis"}
 # cl <- makePSOCKcluster(5)
@@ -1417,6 +1422,10 @@ gridExtra::grid.arrange(rfTuning,rfVarImp, ncol = 2)
 
 
 ```
+
+### 5.3.1 Random forest performance
+
+`r figr('rfperf', TRUE, type="Figure")` shows the model over fit the training data with AUC as 1 and sensitivity of 0.96 and performed poorly on the validation and test data sets relative to Lasso regression model.
 
 
 ```{r rfperf,fig.cap = "model 7 - Random forest performance"}
@@ -1465,9 +1474,9 @@ getPerformance(trainProc2[,-which(names(trainProc2) %in% 'DEFAULT')],validProc2[
 #plot(varImp(rf2))
 ```
 
-## 6.5 xgboost
+## 5.4 xgboost
 
-An extreme gradient boosting model was tuned with a constant learning rate of 10% and L2 regularization of 0. The model was tuned by varying depth of trees and limiting the predictors used with 10% to 90% of the total predictor space. The tuning was performed over 100% and 75% of the training samples. `r figr('xgbtuning', TRUE, type="Figure")` and  `r figr('xgbVarImp', TRUE, type="Figure")` shows the model tuning results and the variable importance of top 20 important variables. The performance of the model is shown in `r figr('xgbPerf', TRUE, type="Figure")`. It is surprising that the training accuracy was not any closer to random forest with L2 regularization at 0. The type - I error (false pass) is very high making the F1 score to be very low at 0.27.
+An extreme gradient boosting model was tuned with a constant learning rate of 10% and L2 regularization of 0. The model was tuned by varying depth of trees and limiting the predictors used with 10% to 90% of the total predictor space. The tuning was performed over 100% and 75% of the training samples. `r figr('xgbtuning', TRUE, type="Figure")` and  `r figr('xgbVarImp', TRUE, type="Figure")` shows the model tuning results and the variable importance of top 20 important variables. The training perforamnce peaks when the model uses 30% of the predictor space and uses tree depth of 2.
 
 ```{r,eval =F}
 
@@ -1575,6 +1584,10 @@ plot(varImp(xgb_model),top = 10, main = "Top 10 predictors - xgboost",tl.cex = 0
 
 ```
 
+### 5.4.1 xgBoost Performance
+
+The performance of the model is shown in `r figr('xgbPerf', TRUE, type="Figure")`. It is surprising that the training accuracy was not any closer to random forest with L2 regularization at 0. The type - I error (false pass) is very high making the F1 score to be very low at 0.27.
+
 ```{r xgbPerf, fig.cap = "model 8 - xgbBoost model performance"}
 #xgb.Perf <- getPerformance(trainProcMat[,-which(colnames(trainProcMat) %in% 'DEFAULT')],validProcMat[,-which(colnames(validProcMat) %in% 'DEFAULT')],y_trainProc,validY,xgb_model$finalModel, title = "xgBoost performance",validBILL = creditdata$BILL_AMT1[creditdata$data.group==3],trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1]))
 
@@ -1596,7 +1609,7 @@ thdcal %>%
              )) + geom_point()
 ```
 
-# 7. Selected Features
+# 6. Selected Features
 
 The union of top 10 predictors from each of the models fit in section 6 are used for further modeling the classification model. The chosen predictors are as shown in table 21.
 
@@ -1645,11 +1658,11 @@ caret::train(x = trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_
 # getPerformance(trainProc[,which(names(trainProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))],validProc[,which(names(validProc) %in% c("DLQ_Total_x_1", "DLQ_Count_3_X"))],y_trainProc,validY,simpleLogit$finalModel)
 ```
 
-# 8. Modeling
+# 7. Predictive Modeling with Selected features
 
 In this section the predictors identified from the previous section are used to build classification model to predict defaulting customers. The models are fit and their appropriate statistics are shown in this section.
 
-## 8.1 Logistic regression 
+## 7.1 Logistic regression 
 
 The summary of the logistic regression shown in table 22 makes intuitive sense for the most part. For example one standard deviation increase in average bill amount leads to 11% increased odds of default. Increased balance over 6 months on credit card increases odds of  default by 7%. As the measure of balance as a distance to credit limit in 3 standard deviations decreases (the distances were replaced by weights of evidence - ppkwoe), the odds of default increases by 17%. As the average monthly payments decreases the odds of default increases from 24% to 114% (see odds ratio of AvgPMT_0_910 to AvgPMT_1750_3333). As the number of delinquencies increase beyond 3, the odds of defaulting increases almost 3 times. The lower levels of standard deviations of bill amounts have surprisingly higher odds of default (27%), this could be potentially interpreted as customers only paying the interest and leaving the principal amount on their credit card. 
 
@@ -1675,9 +1688,9 @@ broom::tidy(logitSelectedPred$finalModel) %>%
   kable_styling(latex_options = "hold_position")
 ```
 
-### 8.1.1 Logistic regression model performance
+### 7.1.1 Logistic regression model performance
 
-The sensitivity of the model is poor at 15%. In the previous sections, it was seen xgBoost and lasso regression had close to 30% sensitivity. The F1 score of the model is 0.27. The performance statistics is shown in `r figr('logitSelected', TRUE, type="Figure")`
+The sensitivity of the model is poor at 15% and 14% for validation and test data sets respectively. In the previous sections, it was seen xgBoost and lasso regression had close to 30% sensitivity. The F1 score of the model is 0.27. The performance statistics is shown in `r figr('logitSelected', TRUE, type="Figure")`
 
 ```{r logitSelected, fig.cap = "model 9 - Logistic regression selected predictors model performance"}
 #getPerformance(trainProc[,which(names(trainProc) %in% Preds)],validProc[,which(names(validProc) %in% Preds)],y_trainProc,validY,logitSelectedPred$finalModel,title = "Logit model with selected features",validBILL = creditdata$BILL_AMT1[creditdata$data.group==3],trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1]) -> logitSelectedPredPerf
@@ -1688,7 +1701,7 @@ The sensitivity of the model is poor at 15%. In the previous sections, it was se
 knitr::include_graphics('modelResults/model9.png',auto_pdf = T)
 ```
 
-### 8.1.2 Improved logistic regression model
+### 7.1.2 Improved logistic regression model
 
 The statistically insignificant features are now removed and the logistic regression model is re-fit. The sensitivity improves by a 1% point. As seen in `r figr('logitSelectedRefit', TRUE, type="Figure")`.
 
@@ -1723,7 +1736,7 @@ The statistically insignificant features are now removed and the logistic regres
 knitr::include_graphics('modelResults/model10.png',auto_pdf = T)
 
 ```
-## 8.2 Naive Bayes 
+## 7.2 Naive Bayes 
 
 Though our predictor space contains features that are not independent of each other, a Naive Bayes classifier is fit to the data to evaluate its performance. The AUC is comparable to the rest of the models, but Naive Bayes' Sensitivity is as high as the xgBoost's model with a high specificity. The F1 score is 0.5, much higher than all other models. As seen in `r figr('NaiveBayes', TRUE, type="Figure")`.
 
@@ -1755,9 +1768,9 @@ knitr::include_graphics('modelResults/model11.png',auto_pdf = T)
 ```
 
 
-## 8.3 Neural network
+## 7.3 Neural network
 
-A feed forward neural network with 1 input layer and 3 hidden layers with drop out layers (rate of 10% drop out) after each hidden layer was chosen. With input layer having as many neurons as the number of chosen predictors and the output layer with a single neuron. Here a model that uses a larger predictor set than the "chosen" predictors from section 7 is presented. While a model that used only the predictors chosen from section 7 was fit, the results were not very encouraging and not presented here. All the hidden layers have ReLU activation and output layer has a sigmoid activation. The objective function was to minimize the binary crossentropy with Adam's optimizer. The model architecture is shown in `r figr('NNArch', TRUE, type="Figure")`. Architecture was chosen based on how model weights updated over epochs. Tensorboard was used to visualize updates in weights. Architecture in which there were diminishing gradient problems, were eliminated. Keras' package's callback function was used to monitor AUC values. `r figr('NNtraining', TRUE, type="Figure")` shows the training evolution. The gradient change in loss over epoch was minimal. However, as the training loss improved, the validation loss increased. Hence there was diminishing returns for dditional iterations of training. Though drop outs were used at every subsequent layer, it did not improve the training process. The model performance is shown in `r figr('NNPerf', TRUE, type="Figure")`. The Naive bayes model performance is better than the neural network model.
+A feed forward neural network with 1 input layer and 3 hidden layers with drop out layers (rate of 10% drop out) after each hidden layer was chosen. With input layer having as many neurons as the number of chosen predictors and the output layer with a single neuron. Here a model that uses a larger predictor set than the "chosen" predictors from section 7 is presented. While a model that used only the predictors chosen from section 6 was fit, the results were not very encouraging and not presented here. All the hidden layers have ReLU activation and output layer has a sigmoid activation. The objective function was to minimize the binary crossentropy with Adam's optimizer. The model architecture is shown in `r figr('NNArch', TRUE, type="Figure")`. Architecture was chosen based on how model weights updated over epochs. Tensorboard was used to visualize updates in weights. Architecture in which there were diminishing gradient problems, were eliminated. Keras' package's callback function was used to monitor AUC values. `r figr('NNtraining', TRUE, type="Figure")` shows the training evolution. The gradient change in loss over epoch was minimal. However, as the training loss improved, the validation loss increased. Hence there was diminishing returns for dditional iterations of training. Though drop outs were used at every subsequent layer, it did not improve the training process. The model performance is shown in `r figr('NNPerf', TRUE, type="Figure")`. The Naive bayes model performance is better than the neural network model.
 
 
 
@@ -2087,7 +2100,7 @@ plot(history3)+ggtitle("Neural Network training and validation statistics") + th
 
 ```
 
-```{r NNPerf,fig.cap = "model 12 - NNeural network model performance",out.width='350px',out.height='300px'}
+```{r NNPerf,fig.cap = "model 12 - Neural network model performance"}
 knitr::include_graphics('modelResults/model12.png',auto_pdf = T)
 ```
 
