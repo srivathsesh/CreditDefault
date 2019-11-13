@@ -32,6 +32,12 @@ getPerformance <- function(trainX,
     
     train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
     valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
+    
+    #------ After though to get predicted prob returned as output---------
+    trainPredProb <- predict(model,trainX,type = "prob")[,"yes"]
+    validPredProb <- predict(model,validX,type = "prob")[,"yes"]
+    #----------------------------------------------------------------------
+    
     if(!is.na(trainBILL) & !is.na(validBILL)){
       trainVar <- sum(as.vector(predict(model,trainX,type = "prob")[,"yes"]) * ifelse(trainBILL<=0,0,trainBILL))
       validVar <- sum(as.vector(predict(model,validX,type = "prob")[,"yes"]) * ifelse(validBILL<=0,0,validBILL))
@@ -50,6 +56,11 @@ getPerformance <- function(trainX,
     validPred <- predict(model,validX)
     train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
     valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
+    
+    #------ After though to get predicted prob returned as output---------
+    trainPredProb <- predict(model,trainX,type = "prob")[,"yes"]
+    validPredProb <- predict(model,validX,type = "prob")[,"yes"]
+    #----------------------------------------------------------------------
     
     if(!is.na(trainBILL) & !is.na(validBILL)){
       trainVar <- sum(as.vector(predict(model,trainX,type = "prob")[,"yes"]) * ifelse(trainBILL<=0,0,trainBILL))
@@ -70,6 +81,11 @@ getPerformance <- function(trainX,
     
     train.roc <- roc(response = trainY, predictor = predict(model,trainX))
     valid.roc <- roc(response = validY, predictor = predict(model,validX))
+    
+    #------ After though to get predicted prob returned as output---------
+    trainPredProb <- predict(model,trainX)
+    validPredProb <- predict(model,validX)
+    #----------------------------------------------------------------------
     if(!is.na(trainBILL) & !is.na(validBILL)){
       trainVar <- sum(as.vector(predict(model,trainX,type = "response")) * ifelse(trainBILL <= 0 , 0 , trainBILL))
       validVar <- sum(as.vector(predict(model,validX,,type = "response"))* ifelse(validBILL<=0,0,validBILL))
@@ -111,7 +127,10 @@ getPerformance <- function(trainX,
               conftbltrain = trainConfusion$table,
               conftblvalid = testConfusion$table,
               recoveredVAR_train = recoveredVAR_train,
-              recoveredVAR_valid = recoveredVAR_valid))
+              recoveredVAR_valid = recoveredVAR_valid,
+              trainPredProb = trainPredProb,
+              validPredProb = validPredProb
+              ))
   
   
 }
