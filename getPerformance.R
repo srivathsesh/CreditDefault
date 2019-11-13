@@ -33,10 +33,10 @@ getPerformance <- function(trainX,
     train.roc <- roc(response = trainY, predictor = predict(model,trainX,type = "prob")[,"yes"])
     valid.roc <- roc(response = validY, predictor = predict(model,validX,type = "prob")[,"yes"])
     
-    #------ After though to get predicted prob returned as output---------
+    # #------ After though to get predicted prob returned as output---------
     trainPredProb <- predict(model,trainX,type = "prob")[,"yes"]
-    validPredProb <- predict(model,validX,type = "prob")[,"yes"]
-    #----------------------------------------------------------------------
+     validPredProb <- predict(model,validX,type = "prob")[,"yes"]
+    # #----------------------------------------------------------------------
     
     if(!is.na(trainBILL) & !is.na(validBILL)){
       trainVar <- sum(as.vector(predict(model,trainX,type = "prob")[,"yes"]) * ifelse(trainBILL<=0,0,trainBILL))
@@ -83,8 +83,8 @@ getPerformance <- function(trainX,
     valid.roc <- roc(response = validY, predictor = predict(model,validX))
     
     #------ After though to get predicted prob returned as output---------
-    trainPredProb <- predict(model,trainX)
-    validPredProb <- predict(model,validX)
+    trainPredProb <- predict(model,trainX,type = "response")
+    validPredProb <- predict(model,validX,type = "response")
     #----------------------------------------------------------------------
     if(!is.na(trainBILL) & !is.na(validBILL)){
       trainVar <- sum(as.vector(predict(model,trainX,type = "response")) * ifelse(trainBILL <= 0 , 0 , trainBILL))

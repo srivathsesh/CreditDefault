@@ -2104,3 +2104,28 @@ plot(history3)+ggtitle("Neural Network training and validation statistics") + th
 knitr::include_graphics('modelResults/model12.png',auto_pdf = T)
 ```
 
+
+## 7.4 Ensemble Model
+
+A prediction model that uses majority class votes by all models fit in the sections above was attempted. The results were not very impressive. The results were poorer with a sensitivity of 0.33 and F1 score of 0.43 across training, validation and test data sets. The % VAR recovered was 0.63 for the test data, which is much lower than the other models. The model performance is shown in `r figr('ensemble', TRUE, type="Figure")`
+
+```{r ensemble,fig.cap = "model 13 - Majority vote ensemble model performance"}
+knitr::include_graphics('modelResults/model13.png',auto_pdf = T)
+```
+
+# 8. Comparison of Results
+
+Table 23 lists the consolidated performance. $F1*$ is defined as $F1* = 2*\frac{precision * recall}{(precision + recall)}$  and $\% VAR\ recovered = \frac{Predicted\ VAR}{Actual\ VAR}$. $VAR$ is value at risk. $F1*$ score is given more importance as it takes into account the true positive rate and false positive rate; followed by sensitivity as there is interest in correctly identifying the defaulters in the customer pool. The next order of importance is given to $\% VAR\ recovered$ as there is interest in budgeting as accurately as possible for value at risk write off. 
+
+When the table is arranged in descending order of $F1*$ , $Sensitivity$ and $\% VAR\ recovered$. Naive Bayes model jumps out as the best performing model.
+
+```{r comparisontable}
+readxl::read_xlsx('modelResults/confusion_matrix_table.xlsx',sheet = "ConsolidatedResult") -> ResultsConsolidated
+
+ResultsConsolidated %>% 
+  kable("latex",digits = 2,booktabs = T,caption = "Model performance comparison") %>% 
+  kable_styling(latex_options = c("striped","hold_position"),font_size = 7) %>% 
+  collapse_rows(columns = 1:2, latex_hline = "major", valign = "middle") %>% 
+  row_spec(31,color = "red")
+```
+
