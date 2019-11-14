@@ -2115,9 +2115,23 @@ knitr::include_graphics('modelResults/model13.png',auto_pdf = T)
 
 # 8. Comparison of Results
 
-Table 23 lists the consolidated performance. $F1*$ is defined as $F1* = 2*\frac{precision * recall}{(precision + recall)}$  and $\% VAR\ recovered = \frac{Predicted\ VAR}{Actual\ VAR}$. $VAR$ is value at risk. $F1*$ score is given more importance as it takes into account the true positive rate and false positive rate; followed by sensitivity as there is interest in correctly identifying the defaulters in the customer pool. The next order of importance is given to $\% VAR\ recovered$ as there is interest in budgeting as accurately as possible for value at risk write off. 
+In this section, the choice of metrics to be used to compare between models and select the best to be used for the business problem.
 
-When the table is arranged in descending order of $F1*$ , $Sensitivity$ and $\% VAR\ recovered$. Naive Bayes model jumps out as the best performing model.
+## 8.1 Choice of metrics 
+
+Banks would ideally want to identify customers who are likely to default to minimize their exposure. Potential actions could be to reduce the credit limit or not offer increased credit, impose transaction limits per day or month. Therefore a model that correctly identifies a defaulting customer is necessary. False positives could result in customers leaving and false negatives increases the exposure to risk. F1 score is a metric that takes into account false positive and true positive rates in the form of combining precision and recall.
+
+$F1* = 2*\frac{precision * recall}{(precision + recall)}$
+
+Banks would like to reduce their overall exposure by making sure they identify all the potential defaulters from their customer population. So looking at the $recall$ metric in addition to $F1* score$  would be useful.
+
+Finally, the model should be able to capture customers who are to default on large amount of money. Therefore  percent or ratio of Value At Risk (VAR) identified by model to the actual VAR for the bank (sum of money defaulted by customers) could be a metric that will be useful to consider for model choice. We will call this metric $\% VAR\ recovered$. 
+
+$\% VAR\ recovered = \frac{Predicted\ VAR}{Actual\ VAR}$
+
+## 8.2 Model choice
+
+Table 23 lists the consolidated performance. When the table is arranged in descending order of $F1*$ , $Sensitivity$ and $\% VAR\ recovered$. Naive Bayes model jumps out as the best performing model.The Naive Bayes model performance is highlighted in red in the table. The Area Under the Curve (AUC) is at the mean of all model's AUC. The performance of the model on test data was considered more important.
 
 ```{r comparisontable}
 readxl::read_xlsx('modelResults/confusion_matrix_table.xlsx',sheet = "ConsolidatedResult") -> ResultsConsolidated
@@ -2126,6 +2140,14 @@ ResultsConsolidated %>%
   kable("latex",digits = 2,booktabs = T,caption = "Model performance comparison") %>% 
   kable_styling(latex_options = c("striped","hold_position"),font_size = 7) %>% 
   collapse_rows(columns = 1:2, latex_hline = "major", valign = "middle") %>% 
-  row_spec(31,color = "red")
+  row_spec(31,color = "red",bold = T)
 ```
+
+# 9. Conclusion
+
+Since the global financial crisis in 2008 there are regulatory requirements for banks to report on their risk exposure. On June 2016 Financial Accounting and Standards Board (FASB) issued a new accounting method called Current Expected Credit Losses (CECL). Per CECL, expected losses over the life of the loan is to be reported and a reserve needs to be set aside by banks to cover for the exposure. This requirement mandates the use of effective predictive models to predict potential losses or defaults by customers during the life of the loan. The predicitive model not only helps CECL reporting needs, but also helps banks minimize the risk by taking actions such as reducing the credit limit on the credit card, imposing transaction limits on daily or monthly basis or loan re-adjustment for the customer etc. 
+
+This paper explored the various modeling techniques that could be used for predicting customers defaulting on their credit card bills. The models identified important predictors such as prior number of delinquencies, growth of balance month over 6 months, average monthly payments, credit utilization etc. (refer table 21 for the complete list). The Naive Bayes model performed the best with a F1 score of 0.48, recall of 0.5 and a precision of 0.47. The performance was not as strong as expected. 
+
+To further the analysis, 
 
