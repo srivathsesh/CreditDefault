@@ -25,13 +25,15 @@ library(kfigr)
 
 \newpage
 
-# 1. Introduction (DRAFT)
+# 1. Introduction
 
-This paper discusses the various modeling approaches to predict customers defaulting on their credit card payments by using six months' credit card bill amounts, payment history. A working model that takes in customer data and reports a list of customers at risk of default and the amount of money that is at risk. The following are the key insights that were discovered from the data:
+Current Expected Credit Losses (CECL) is an accounting standard that was released by Financial Accounting Standards Board (FASB) in June 2016. CECL mandates banks to report on expected losses over the life of the loan rather than just the losses incurred at the time of their financial reporting. Banks are required to report on the allowance for credit losses as accurately as possible, which calls for accurate predicitve models for identifying customers who are to default and estimating the losses from their accounts. 
 
-  1. X % increase in monthly bill for a customer paying bills at a rate of y% of the monthly bill has Z% increased risk compared to average customer.
-  2. 
+(Yeh & Lien, 2009) in their paper explore six different modeling methods - discriminant analysis, logistic regression, Bayes classifier, nearest neighbor, artificial neural networks and classification trees and their applications on real cardholders’ credit risk data in Taiwan (“UCI Machine Learning Repository: Default of credit card clients Data Set,” n.d.). They quantify the performance of the models, but show very little detail on what variables were used in their model and if they used derived variables for modeling.
 
+This paper attempts to enhance Yeh and Lien's work by exploring derived variables from the data such as, credit utilization, payments to bill ratio, prior delinquencies in months and number of bills delinquent etc. and their effect on the model performance. Yeh and Lien show that artifical neural network was their best performing model, though they do not discuss on the architecture of the network. In this paper, Naive Bayes model outperformed the neural network model with a precision of 0.47, recall of 0.5 and a F1 (defined as $\frac{2*(precision * recall)}{precision + recall}$) score of 0.48. This paper also attempts to quantify the model's ability correctly capture the Value at Risk (VAR). This is done by introducing a new metric % VAR recovered, which is a ratio of loss as identified by the model to the actual loss.
+
+In the next section, the summary of the raw data is presented and in section 3, new features derived from the data are discussed. The predicitve ability of the derived features and others are explored in section 4 and in section 5 model based feature selection is discussed. The models are discussed in section 7 and the results are summarised in section 8. 
 
 
 # 2. Data
@@ -726,7 +728,7 @@ gridExtra::grid.arrange(p1,p2,p3,p5, ncol = 2)
 
 ## 4.3 Utilization of credit limit
 
-A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 4, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is to be noted that there is an increase in the odds of default for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of `r figr('ppkUtilAge', TRUE, type="Figure")` . It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization, 
+A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 3, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is to be noted that there is an increase in the odds of default for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of `r figr('ppkUtilAge', TRUE, type="Figure")` . It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization, 
 
 ```{r ppkUtilAge,fig.cap="Utilization of credit limit's effect on Default",fig.height=4,fig.pos = 'asis',fig.height=4}
 train %>% ggplot(aes(x=log(ifelse(ppk <=0, 0.0000001,ppk)),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("log(ppk)")-> u1
@@ -767,11 +769,11 @@ chisq.test(balflagtbl) %>% pander()
 
 ## 4.5 Effect of decreased payments
 
-Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistically significant results when explored graphically using density plots. However, in the section 5.8.1.1, decision trees help bring out signal from payment variables. The influence of payments are discussed in section 5.8.1.2 below.
+Payments as a ratio of bill amounts, average payment amounts, continuous decrease in payments/pay ratios over time did not yield statistically significant results when explored graphically using density plots. However, in the section 4.8.1.1, decision trees help bring out signal from payment variables and the effect of payments is discussed in that section below.
 
 ## 4.6 Effect of Age
 
-Figure 1 in section 4 shows relatively higher chances of defaulting in the early ages (21-24) and in the age group past mid-life 45 years and above. The increased chances in default past mid-life may be potentially attributed to loss in employment and or health related events in life.
+Figure 1 in section 3 shows relatively higher chances of defaulting in the early ages (21-24) and in the age group past mid-life 45 years and above. The increased chances in default past mid-life may be potentially attributed to loss in employment and or health related events in life.
 
 
 
@@ -932,7 +934,7 @@ plot(prty,gp = gpar(fontsize = 4),
 
 
 
-`r figr('woes', TRUE, type="Figure")` confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average payment ratio (left panel of `r figr('woes', TRUE, type="Figure")`). The average payment amount can be binned into 5 groups as shown in the right panel of the figure. The splitting of total delinquencies as seen in the analysis in section 5.2 is reproduced in Figure `r figr('woes', TRUE, type="Figure")`. 
+`r figr('woes', TRUE, type="Figure")` confirms the interpretation of the splitting point of 0.03 and 0.12 for average payment ratio (or a singleton cut point of 0.12). The split points align with WOE for the average payment ratio (left panel of `r figr('woes', TRUE, type="Figure")`). The average payment amount can be binned into 5 groups as shown in the right panel of the figure. The splitting of total delinquencies as seen in the analysis in section 4.2 is reproduced in Figure `r figr('woes', TRUE, type="Figure")`. 
 
 ```{r woes,fig.cap="WOE binning of (top left) Avg_PMT_RATIO, (top right) Avg_PMT_Amt,(bottom left) Bill Standard Deviation, (bottom right) DLQ_Total",fig.pos='asis',fig.height=4}
 Information::create_infotables(data = creditdata %>% filter(train==1) %>% select(Avg_PMT_RATIO, DEFAULT) %>% mutate(DEFAULT = as.numeric(DEFAULT)-1), y = "DEFAULT", parallel = T, bins = 4) ->payratioamt
@@ -1611,7 +1613,7 @@ thdcal %>%
 
 # 6. Selected Features
 
-The union of top 10 predictors from each of the models fit in section 6 are used for further modeling the classification model. The chosen predictors are as shown in table 21.
+The union of top 10 predictors from each of the models fit in section 5 are used for further modeling the classification model. The chosen predictors are as shown in table 21.
 
 ```{r}
 # LassoPreds <- Importance %>% top_n(8,abs(Coef))
@@ -1770,7 +1772,7 @@ knitr::include_graphics('modelResults/model11.png',auto_pdf = T)
 
 ## 7.3 Neural network
 
-A feed forward neural network with 1 input layer and 3 hidden layers with drop out layers (rate of 10% drop out) after each hidden layer was chosen. With input layer having as many neurons as the number of chosen predictors and the output layer with a single neuron. Here a model that uses a larger predictor set than the "chosen" predictors from section 7 is presented. While a model that used only the predictors chosen from section 6 was fit, the results were not very encouraging and not presented here. All the hidden layers have ReLU activation and output layer has a sigmoid activation. The objective function was to minimize the binary crossentropy with Adam's optimizer. The model architecture is shown in `r figr('NNArch', TRUE, type="Figure")`. Architecture was chosen based on how model weights updated over epochs. Tensorboard was used to visualize updates in weights. Architecture in which there were diminishing gradient problems, were eliminated. Keras' package's callback function was used to monitor AUC values. `r figr('NNtraining', TRUE, type="Figure")` shows the training evolution. The gradient change in loss over epoch was minimal. However, as the training loss improved, the validation loss increased. Hence there was diminishing returns for dditional iterations of training. Though drop outs were used at every subsequent layer, it did not improve the training process. The model performance is shown in `r figr('NNPerf', TRUE, type="Figure")`. The Naive bayes model performance is better than the neural network model.
+A feed forward neural network with 1 input layer and 3 hidden layers with drop out layers (rate of 10% drop out) after each hidden layer was chosen. With input layer having as many neurons as the number of chosen predictors and the output layer with a single neuron. Here a model that uses a larger predictor set than the "chosen" predictors from section 6 is presented. While a model that used only the predictors chosen from section 6 was fit, the results were not very encouraging and not presented here. All the hidden layers have ReLU activation and output layer has a sigmoid activation. The objective function was to minimize the binary crossentropy with Adam's optimizer. The model architecture is shown in `r figr('NNArch', TRUE, type="Figure")`. Architecture was chosen based on how model weights updated over epochs. Tensorboard was used to visualize updates in weights. Architecture in which there were diminishing gradient problems, were eliminated. Keras' package's callback function was used to monitor AUC values. `r figr('NNtraining', TRUE, type="Figure")` shows the training evolution. The gradient change in loss over epoch was minimal. However, as the training loss improved, the validation loss increased. Hence there was diminishing returns for dditional iterations of training. Though drop outs were used at every subsequent layer, it did not improve the training process. The model performance is shown in `r figr('NNPerf', TRUE, type="Figure")`. The Naive bayes model performance is better than the neural network model.
 
 
 
@@ -2149,5 +2151,5 @@ Since the global financial crisis in 2008 there are regulatory requirements for 
 
 This paper explored the various modeling techniques that could be used for predicting customers defaulting on their credit card bills. The models identified important predictors such as prior number of delinquencies, growth of balance month over 6 months, average monthly payments, credit utilization etc. (refer table 21 for the complete list). The Naive Bayes model performed the best with a F1 score of 0.48, recall of 0.5 and a precision of 0.47. The performance was not as strong as expected. 
 
-To further the analysis, 
+To get better model performance, data issues could be addressed. For example, in the data provided there were over 500 customers whose bill was 0, but were marked defaulting customer. Secondly additional features such as home ownership, credit score could be explored for prediciting defaulting customers. Additionally, different modeling approaches such as CHAID, SVM and different neural network architecture including Boltzmann Machines could be tried.  
 
