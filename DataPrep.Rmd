@@ -1,7 +1,7 @@
 ---
-title: "Credit Default Prediction"
-author: "Sri Seshadri"
-date: "9/28/2019"
+title: ""
+author: ""
+date: ""
 output:
   pdf_document:
     toc: yes
@@ -728,7 +728,7 @@ gridExtra::grid.arrange(p1,p2,p3,p5, ncol = 2)
 
 ## 4.3 Utilization of credit limit
 
-A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 3, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is to be noted that there is an increase in the odds of default for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of `r figr('ppkUtilAge', TRUE, type="Figure")` . It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization, 
+A process capability metric used in the quality engineering domain is used here to determine how close does the bill come to the credit limit in the units of 3 times standard deviation of the bills. Figure 1 in section 3, shows that ppk less that 0.5 have a higher odds (odds of 1.34) for defaulting. It is to be noted that there is an increase in the odds of default for customers who have higher ppk. It was hypothesized that these very low utilization of credit may be from higher age group of customers, but there is no solid evidence of that as seen in the second panel of `r figr('ppkUtilAge', TRUE, type="Figure")` . It is to be noted that for easier visualization the natural log of ppk was used with negative ppk (bills higher than credit limit) set to very low (1e-07) value. The bottom panel of the plot shows the effect due to the average utilization. 
 
 ```{r ppkUtilAge,fig.cap="Utilization of credit limit's effect on Default",fig.height=4,fig.pos = 'asis',fig.height=4}
 train %>% ggplot(aes(x=log(ifelse(ppk <=0, 0.0000001,ppk)),group = DEFAULT, col = DEFAULT, fill = DEFAULT)) + geom_density(alpha = 0.4) + theme_bw() + xlab("log(ppk)")-> u1
