@@ -1,19 +1,20 @@
 ---
-title: ""
-author: ""
-date: ""
+title: |
+  | \vspace{8cm} \LARGE{Credit Default Risk Modeling}
+  | MSDS 498 Capstone
+  | Northwestern University
+  
+author: "Sri Seshadri"
+date: "`r Sys.Date()`"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: 3
-bibliography: chumma2.bib  
+  pdf_document
+bibliography: chumma2.bib
 header-includes:
 - \usepackage{pdflscape}
 - \newcommand{\blandscape}{\begin{landscape}}
 - \newcommand{\elandscape}{\end{landscape}}
 - \usepackage{setspace}\doublespacing
 - \usepackage{float}
-
 
 
   
@@ -26,16 +27,18 @@ library(kfigr)
 ```
 
 \newpage
+\tableofcontents
+\newpage
 
 # 1. Introduction
 
-Current Expected Credit Losses (CECL) is an accounting standard that was released by Financial Accounting Standards Board (FASB) in June 2016. CECL mandates banks to report on expected losses over the life of the loan rather than just the losses incurred at the time of their financial reporting. Banks are required to report on the allowance for credit losses as accurately as possible, which calls for accurate predicitve models for identifying customers who are to default and estimating the losses from their accounts. 
+Current Expected Credit Losses (CECL) is an accounting standard that was released by Financial Accounting Standards Board (FASB) in June 2016. CECL mandates banks to report on expected losses over the life of the loan rather than just the losses incurred at the time of their financial reporting. Banks are required to report on the allowance for credit losses as accurately as possible, which calls for accurate predicitve models for identifying customers who are to default. And estimate the losses from their accounts. 
 
 @yeh_comparisons_2009 in their paper explore six different modeling methods - discriminant analysis, logistic regression, Bayes classifier, nearest neighbor, artificial neural networks and classification trees and their applications on real cardholders’ credit risk data in Taiwan (“UCI Machine Learning Repository: Default of credit card clients Data Set,” n.d.). They quantify the performance of the models, but show very little detail on what variables were used in their model and if they used derived variables for modeling.
 
-This paper attempts to enhance Yeh and Lien's work by exploring derived variables from the data such as, credit utilization, payments to bill ratio, prior delinquencies in months and number of bills delinquent etc. and their effect on the model performance. Yeh and Lien show that artifical neural network was their best performing model, though they do not discuss on the architecture of the network. In this paper, Naive Bayes model outperformed the neural network model with a precision of 0.47, recall of 0.5 and a F1 (defined as $\frac{2*(precision * recall)}{precision + recall}$) score of 0.48. This paper also attempts to quantify the model's ability correctly capture the Value at Risk (VAR). This is done by introducing a new metric % VAR recovered, which is a ratio of loss as identified by the model to the actual loss.
+This paper attempts to enhance Yeh and Lien's work by exploring derived variables from the data (such as, credit utilization, payments to bill ratio, prior delinquencies in months and number of bills delinquent etc.) and their effect on the model performance. Yeh and Lien show that artifical neural network was their best performing model, though they do not discuss on the architecture of the network. In this paper, Naive Bayes model outperformed the neural network model with a precision of 0.47, recall of 0.5 and a F1 score (defined as $\frac{2*(precision * recall)}{precision + recall}$, see **appendix** for more details on why this definition is conservative) of 0.48. This paper also attempts to quantify the model's ability to correctly capture the Value at Risk (VAR). This is done by introducing a new metric % VAR recovered, which is a ratio of loss as identified by the model to the actual loss.
 
-In the next section, the summary of the raw data is presented and in section 3, new features derived from the data are discussed. The predicitve ability of the derived features and others are explored in section 4 and in section 5 model based feature selection is discussed. The models are discussed in section 7 and the results are summarised in section 8. 
+In section 2, the summary of the raw data is presented and in section 3, new features derived from the data are discussed. The predicitve ability of the derived features and others are explored in section 4 and in section 5 model based feature selection is discussed. The models are discussed in section 7 and the results are summarised in section 8. 
 
 
 # 2. Data
@@ -2125,11 +2128,11 @@ In this section, the choice of metrics to be used to compare between models and 
 
 Banks would ideally want to identify customers who are likely to default to minimize their exposure. Potential actions could be to reduce the credit limit or not offer increased credit, impose transaction limits per day or month. Therefore a model that correctly identifies a defaulting customer is necessary. False positives could result in customers leaving and false negatives increases the exposure to risk. F1 score is a metric that takes into account false positive and true positive rates in the form of combining precision and recall.
 
-\{begin}center  $F1* = 2*\frac{precision * recall}{(precision + recall)}$ \end {center}
+\begin{center}  $F1* = 2*\frac{precision * recall}{(precision + recall)}$ \end {center}
 
 Once can derive another form of F1 score from the above equation, which is as below
 
-\{begin}center  $F1 = \frac{2*True\ Positive\ Rate}{2* True\ Positive\ Rate + False\ Negative \ Rate + False\ Positive\ Rate}$ \end {center}
+\begin{center}   $F1 = \frac{2*True\ Positive\ Rate}{2* True\ Positive\ Rate + False\ Negative \ Rate + False\ Positive\ Rate}$ \end {center}
 
 But this form of F1 score happens to over estimate the F1 score due to precision of digits, especially when $False\ Positive\ Rate$ is high. Hence we use $F1*$ to be conservative. See **Appendix** for more details.
 
@@ -2137,7 +2140,7 @@ Banks would like to reduce their overall exposure by making sure they identify a
 
 Finally, the model should be able to capture customers who are to default on large amount of money. Therefore  percent or ratio of Value At Risk (VAR) identified by model to the actual VAR for the bank (sum of money defaulted by customers) could be a metric that will be useful to consider for model choice. We will call this metric $\% VAR\ recovered$. 
 
-\{begin}center $\% VAR\ recovered = \frac{Predicted\ VAR}{Actual\ VAR}$ \end {center}
+\begin{center}  $\% VAR\ recovered = \frac{Predicted\ VAR}{Actual\ VAR}$ \end {center}
 
 ## 8.2 Model choice
 
@@ -2153,6 +2156,8 @@ ResultsConsolidated %>%
   row_spec(31,color = "red",bold = T)
 ```
 
+\newpage
+
 # 9. Conclusion
 
 Since the global financial crisis in 2008 there are regulatory requirements for banks to report on their risk exposure. On June 2016 Financial Accounting and Standards Board (FASB) issued a new accounting method called Current Expected Credit Losses (CECL). Per CECL, expected losses over the life of the loan is to be reported and a reserve needs to be set aside by banks to cover for the exposure. This requirement mandates the use of effective predictive models to predict potential losses or defaults by customers during the life of the loan. The predicitive model not only helps CECL reporting needs, but also helps banks minimize the risk by taking actions such as reducing the credit limit on the credit card, imposing transaction limits on daily or monthly basis or loan re-adjustment for the customer etc. 
@@ -2165,11 +2170,117 @@ To get better model performance, data issues could be addressed. For example, in
 
 # References
 
+<div id="refs"></div>
 ---
 nocite: |
   @kuhn_applied_2013
-...  
+...
+
+\newpage
+
+# Appendix
+
+Here the over estimation of F1 score when using the below formula is proved.
+
+\begin{center}  $F1 = \frac{2*True\ Positive\ Rate}{2* True\ Positive\ Rate + False\ Negative \ Rate + False\ Positive\ Rate}$ \end{center}
+
+  
+  
+  
+  
 
 
+
+Before proving the over estimation, we'd prove that below formula is the same as the formula above.
+
+\begin{center} $F1* = 2*\frac{precision * recall}{(precision + recall)}$ \end{center}
+
+
+Below is the depiction of confusion matrix
+
+```{r,fig.align='center'}
+knitr::include_graphics('modelResults/confmat.png',auto_pdf = T)
+```
+
+\begin{center}  $Precision = \frac{TP}{TP + FP}$ \end{center}
+
+
+\begin{center}  $Recall = \frac{TP}{TP + FN}$ \end{center}
+
+Therefore,
+
+\begin{center} $F1* = 2*\frac{\frac{TP}{TP + FP} * \frac{TP}{TP + FN}}{(\frac{TP}{TP + FP} + \frac{TP}{TP + FN})}$ \end{center}
+
+\begin{center}  $= \frac{2*TP^{2}}{2*TP^{2} + TP(FN+FP)}$ \end{center}
+
+\begin{center}  $= \frac{2*TP}{2*TP + FN+FP}$ \end{center}
+
+
+Let us say we have the following confusion matrix
+
+```{r}
+data.frame(Actual = c(rep(0,1383),rep(1,900)),
+           Predicted = c(rep(0,1332),rep(1,51),rep(0,53),rep(1,847))) -> df
+  df %>% table()
+```
+
+
+
+
+\begin{center} Precision = `r 847/(847+51)` \end{center}
+
+\begin{center} Recall =  `r 847/(847+53)` \end{center}
+
+\begin{center} $F1* = 2*\frac{0.9432071*0.9411111}{(0.9411111+0.9432071)}$ \end{center}
+
+\begin{center} F1* = `r 2*( 0.9432071*0.9411111)/(0.9411111+0.9432071)` \end{center}
+
+
+When we re-write the table in row-wise proportions, we get the TPR, FPR TNR and FNR
+
+
+```{r}
+prop.table(table(df), margin = 1)
+```
+
+
+now ,
+
+\begin{center} $F1 = \frac{2*0.94111111}{2*0.94111111 + 0.05888889 + 0.03687636}$ \end{center}
+
+\begin{center} F1 = `r (2*0.94111111)/(2*0.94111111 + 0.05888889 + 0.03687636)` \end{center}
+
+We don't see much difference between F1* and F1. However we'll now inflate the False Positive Rate (FPR)
+
+Here is how the confusion matrix with inflated false positives look like
+
+```{r}
+data.frame(Actual = c(rep(0,1383),rep(1,900)),
+           Predicted = c(rep(1,1383),rep(0,53),rep(1,847))) -> df2
+  df2 %>% table()
+```
+
+\begin{center} Precision = `r 847/(847+1383)` \end{center}
+
+\begin{center} Recall =  `r 847/(847+53)` \end{center}
+
+\begin{center} $F1* = 2*\frac{0.3798206*0.9411111}{(0.9411111+0.3798206)}$ \end{center}
+
+\begin{center} F1* = `r 2*( 0.3798206*0.9411111)/(0.9411111+0.3798206)` \end{center}
+
+now again, we re-write the table in row-wise proportions, we get the TPR, FPR TNR and FNR
+
+
+```{r}
+prop.table(table(df2), margin = 1)
+```
+
+now,
+
+\begin{center} $F1 = \frac{2*0.94111111}{2*0.94111111 + 0.05888889 + 0.03687636}$ \end{center}
+
+\begin{center} F1 = `r (2*0.94111111)/(2*0.94111111 + 0.05888889 + 1)` \end{center}
+
+Now we see that there is a difference between the two estimates of the score, which is approximately 15% difference.
 
 
