@@ -115,9 +115,9 @@ getPerformance <- function(trainX,
   
   rownames(PerformanceMeasures) <- rowNames
  
-  plot(train.roc,legacy.axes = T, asp = NA, col = "blue",main = title)
+  plot(train.roc,legacy.axes = T, asp = NA, col = "blue",main = title,grid = T)
   plot(valid.roc,legacy.axes = T, asp = NA, col = "red",add = T)
-  legend("bottomright",legend = c(paste0("Train; AUC:",round(PerformanceMeasures$auc[1],2)), paste0("validation; AUC:",round(PerformanceMeasures$auc[2],2))), col = c("blue", "red"), lty = 1,cex = 0.6)
+  legend("bottomright",legend = c(paste0("Train; AUC:",round(PerformanceMeasures$auc[1],2)), paste0("Test; AUC:",round(PerformanceMeasures$auc[2],2))), col = c("blue", "red"), lty = 1,cex = 0.6)
   
   #p <- recordPlot()
   #plot.new()

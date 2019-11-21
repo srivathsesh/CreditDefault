@@ -1,0 +1,127 @@
+---
+title: |
+  | \vspace{8cm} \LARGE{Credit Default Risk Model}
+  | Performance Monitoring Plan
+  | MSDS 498 Capstone
+  | Northwestern University
+author: "Sri Seshadri"
+date: "11/20/2019"
+output: pdf_document
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+- \usepackage{setspace}\doublespacing
+- \usepackage{float}
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(caret)
+library(magrittr)
+library(pander)
+library(knitr)
+library(kableExtra)
+library(matrixStats)
+library(OneR)
+library(kfigr)
+source('getPerformance.R')
+load('checkpoint3.RData')
+```
+
+\newpage
+\tableofcontents
+\newpage
+
+# 1. The Production Model
+
+Amongst many models that were fit, the logistic regression model is chosen for production for the purposes explainability and performance. There were several variations of the logistic regression model fit, but the model described below is chosen for its performance compared to the others. Though there are predictors that are statistically insignificant, their contribution to the performance was noted and hence included in this model. The performance of the model is discussed in section 2. 
+
+## 1.1 Model Equation and Predictor nomenclature
+
+The model equation is shown below and the nomenclature of the predictors used is shown in table 1. The calculation of some of the predictors from the features in the data are shown in Appendix.
+
+$$
+  \footnotesize
+  \begin{aligned}
+  log(\frac{p(y="default"|X)}{1 -p(y="default"|X)}) = \ &3.3814 \\
+  &-0.1215 * SEX2 \\
+  &+0.0269 * EDUCATION2 \\
+  &+0.0217 * EDUCATION3 \\
+  &-0.7956 * EDUCATION4 \\
+  &-0.8485 * EDUCATION9 \\
+  &+2.4033 * MARRIAGE1 \\
+  &+2.2538 * MARRIAGE2 \\
+  &+2.3512 * MARRIAGE3 \\
+  &+0.0595 * Avg\_UTIL \\
+  &+0.1327 * Avg\_BILL\_Amt \\
+  &+0.0788 * Bal\_Growth\_6mo \\
+  &-0.0112 * UTIL\_Growth\_6mo \\
+  &-0.3394 * balFlag1 \\
+  &+0.5959 * payFlag1 \\
+  &+0.0786 * payRatioFlag1 \\
+  &-0.0353 * PerBALinc \\
+  &+0.0544 * PerUTILinc \\
+  &-0.0343 * Max\_Pmt\_Amt \\
+  &+0.055 * AGE\_21\_251 \\
+  &-0.0941 * AGE\_26\_291 \\
+  &-0.08 * AGE\_30\_331 \\
+  &+0.0263 * AGE\_34\_381 \\
+  &+0.0692 * AGE\_39\_441 \\
+  &+0.1413 * ppkwoe \\
+  &+0.9282 * AvgPMT\_0\_9101 \\
+  &+0.5356 * AvgPMT\_911\_17491 \\
+  &+0.3876 * AvgPMT\_1750\_33331 \\
+  &+0.1612 * AvgPMT\_3333\_68351 \\
+  &-0.1559 * Avg\_PMT\_RATIO\_X\_0051 \\
+  &-0.1844 * Avg\_PMT\_RATIO\_005\_0111 \\
+  &+0.2202 * stdBILL\_x\_45211 \\
+  &-1.1866 * DLQ\_Total\_x\_11 \\
+  &+1.0136 * DLQ\_Count\_3\_X1 \\
+\end{aligned}
+ $$
+ 
+```{r Preds}
+readxl::read_xlsx("FeatTables.xlsx",sheet = 2) %>% 
+   kable("latex", caption = "Nomencalture of Predictors",booktabs = T) %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+```
+
+The numerical values in the predictor space were scaled and standardized. The means and standard deviations used for the normalization are provide in table 2.
+
+```{r normalization}
+data.frame(Predictors = names(preProc$mean),
+           means = preProc$mean,
+           StdDeviations = preProc$std,
+           row.names = NULL) %>% 
+  kable("latex",digits = 4, caption = "Means and Standard deviaitons used for normalization",booktabs = T) %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+```
+
+## 1.2 Model interpretation 
+
+Model coefficients and odds ratio are shown in table 3.The coefficients for most of the features are intuitive, for example the males have 12% more odds than females to default. For one standard deviation increase in average utilization odds of default increases by 6%. Likewise, one standard deviation increase in average bill amount increases the odds for defaulting by 14%. Customers delinquent by 3 or more months have the odds increase by 2.75 times. Also with decreasing levels in the buckets of average payments, the odds of default increases. However, the odds of defaults being 15 - 17% lower for lower payment to bill ratios is very counter intuitive
+
+```{r coef}
+broom::tidy(logitmdl2$finalModel) %>% 
+  mutate(oddsRatio = exp(estimate)) %>% 
+  kable("latex",digits = 4, caption = "Summary of Simple Logistic regression model",booktabs = T) %>% 
+  kable_styling(latex_options = "hold_position",font_size = 7)
+
+
+```
+
+# 2. Model Performance
+
+`r figr('mdl4', TRUE, type="Figure")` shows the performance of the logistic regression model. Though the model has an AUC of 77% (see `r figr('mdl4Perf', TRUE, type="Figure")` ), the sensitivity is only 0.16 and less than ideal F1 score of 0.25,0.26 and 0.25 for training, validation and test data sets respectively. The % VAR recovered (ratio of loss as identified by the model to the actual loss) of 100%, 102% and 115% for train,validation and test data sets respectively.
+
+```{r mdl4,fig.cap = "model4 - Simple logit regression",fig.align='center',fig.height=4,fig.show='asis'}
+knitr::include_graphics('modelResults/model4.png',auto_pdf = T)
+```
+
+```{r mdl4Perf,fig.cap = "ROC Curve of logistic regression model",out.height="300Px", out.width="300px",fig.align='center'}
+knitr::include_graphics('modelResults/SLRROC.png',auto_pdf = T)
+```
+
