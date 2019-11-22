@@ -115,13 +115,87 @@ broom::tidy(logitmdl2$finalModel) %>%
 
 # 2. Model Performance
 
-`r figr('mdl4', TRUE, type="Figure")` shows the performance of the logistic regression model. Though the model has an AUC of 77% (see `r figr('mdl4Perf', TRUE, type="Figure")` ), the sensitivity is only 0.16 and less than ideal F1 score of 0.25,0.26 and 0.25 for training, validation and test data sets respectively. The % VAR recovered (ratio of loss as identified by the model to the actual loss) of 100%, 102% and 115% for train,validation and test data sets respectively.
+`r figr('mdl4', TRUE, type="Figure")` shows the performance of the logistic regression model. Though the model has an AUC of 77% (see `r figr('mdl4Perf', TRUE, type="Figure")`), the sensitivity is only 0.16 and less than ideal F1 score of 0.25 and 0.25 for training and test data sets respectively. The % VAR recovered (ratio of loss as identified by the model to the actual loss) of 100% and 115% for train and test data sets respectively.
 
-```{r mdl4,fig.cap = "model4 - Simple logit regression",fig.align='center',fig.height=4,fig.show='asis'}
-knitr::include_graphics('modelResults/model4.png',auto_pdf = T)
+ `r figr('mdl4Perf2', TRUE, type="Figure")` and `r figr('mdl4Perf4', TRUE, type="Figure")` show the lift chart and the KS statistics for training and test data respectively. The KS statistic for training and test data is 40.4.
+
+```{r mdl4,fig.cap = "model4 - Simple logit regression",fig.align='center',fig.show='asis'}
+knitr::include_graphics('modelResults/ProdModel.png',auto_pdf = T)
 ```
 
-```{r mdl4Perf,fig.cap = "ROC Curve of logistic regression model",out.height="300Px", out.width="300px",fig.align='center'}
+```{r mdl4Perf,fig.cap = "ROC Curve of logistic regression model",fig.align='center',out.height="250px", out.width="250px"}
 knitr::include_graphics('modelResults/SLRROC.png',auto_pdf = T)
 ```
 
+```{r kstraining,warning=FALSE, message = F, eval = F}
+
+#---------------------------------------------------------------------------------------------------------------------------------
+#      The results of the inputtable is populates onto a spreadsheet by Dr Bhatti named KS_GoofVdBad_Example.xlsx
+#---------------------------------------------------------------------------------------------------------------------------------
+getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],validProc[,-which(names(trainProc) %in% 'DEFAULT')],y_trainProc,validY,logitmdl2$finalModel, title = "Simple Logistic regression",,validBILL = creditdata$BILL_AMT1[creditdata$data.group==3],trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1]) -> trainValidStats
+
+modelScores <- trainValidStats$kstraindf
+
+modelScores %<>%
+  mutate(decile.pts = cut(score,breaks = 
+                            c(0,quantile(score,probs = seq(from = 0.1,to= 0.9, by = 0.1)),1),
+                          labels = rev(c('1','2','3','4','5','6','7','8','9','10')))
+  )
+
+inputtable <- data.frame(Y1= table(modelScores$decile.pts,modelScores$class)[,2],
+                         Y0 = table(modelScores$decile.pts,modelScores$class)[,1],
+                         Decile = rev(c(1,2,3,4,5,6,7,8,9,10))) %>% 
+  arrange(Decile)
+
+
+
+modelScoresvalid <- trainValidStats$kdvaliddf
+
+modelScoresvalid %<>%
+  mutate(decile.pts = cut(score,breaks = 
+                            c(0,quantile(score,probs = seq(from = 0.05,to= 0.95, by = 0.05)),1),
+                          labels = rev(as.character(seq(1:20))))
+  )
+
+inputtablevalid <- data.frame(Y1= table(modelScoresvalid$decile.pts,modelScoresvalid$class)[,2],
+                         Y0 = table(modelScoresvalid$decile.pts,modelScoresvalid$class)[,1],
+                         Decile = rev(seq(1:20))) %>% 
+  arrange(Decile)
+
+perf.logittest <- getPerformance(trainProc[,-which(names(trainProc) %in% 'DEFAULT')],testProc[,-which(names(trainProc) %in% 'DEFAULT')],y_trainProc,testY,logitmdl2$finalModel, title = "Simple Logistic regression",,validBILL = creditdata$BILL_AMT1[creditdata$data.group==2],trainBILL = creditdata$BILL_AMT1[creditdata$data.group==1])
+
+
+modelScorestest <- perf.logittest$kdvaliddf
+
+modelScorestest %<>%
+  mutate(decile.pts = cut(score,breaks = 
+                            c(0,quantile(score,probs = seq(from = 0.1,to= 0.9, by = 0.1)),1),
+                          labels = rev(c('1','2','3','4','5','6','7','8','9','10')))
+  )
+
+inputtabletest <- data.frame(Y1= table(modelScorestest$decile.pts,modelScorestest$class)[,2],
+                         Y0 = table(modelScorestest$decile.pts,modelScorestest$class)[,1],
+                         Decile = rev(c(1,2,3,4,5,6,7,8,9,10))) %>% 
+  arrange(Decile)
+```
+
+
+```{r mdl4Perf2,fig.cap = "Training data lift chart and KS Statistic",fig.align='center'}
+knitr::include_graphics('modelResults/KSTraining.png',auto_pdf = T)
+```
+
+```{r mdl4Perf3,fig.cap = "Validation data lift chart and KS Statistic",fig.align='center',eval = F}
+knitr::include_graphics('modelResults/KSValid.png',auto_pdf = T)
+```
+
+```{r mdl4Perf4,fig.cap = "Test data lift chart and KS Statistic",fig.align='center'}
+knitr::include_graphics('modelResults/KSTest.png',auto_pdf = T)
+```
+
+# 3. Performance Monitoring Plan
+
+ `r figr('mdl4Perf5', TRUE, type="Figure")` shows the performance monitoring action plan. KS statistic when less than or equal to 33, the model shall be re-developed. When the KS statistic is between 33 and 38, the model shall be re-validated in 3 months. If the KS Statistic is greater than or equal to 38 the model shall be re-validated in 6 months.
+
+```{r mdl4Perf5,fig.cap = "Performance Monitoring Plan",fig.align='center'}
+knitr::include_graphics('modelResults/PerfMonitoringPlan.png',auto_pdf = T)
+```
